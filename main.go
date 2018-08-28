@@ -65,8 +65,6 @@ func main() {
 
 	// Handle mouse
 	doc.Call("addEventListener", "mousemove", mouseMoveEvt)
-	doc.Call("getElementById", "count").Call("addEventListener", "change", countChangeEvt)
-	doc.Call("getElementById", "speed").Call("addEventListener", "input", speedInputEvt)
 
 	dt.SetNDots(100)
 	dt.lines = false
@@ -80,10 +78,6 @@ func main() {
 		tdiff := now - tmark
 		tdiffSum += now - tmark
 		markCount++
-		if markCount > 10 {
-			doc.Call("getElementById", "fps").Set("innerHTML", fmt.Sprintf("FPS: %.01f", 1000/(tdiffSum/float64(markCount))))
-			tdiffSum, markCount = 0, 0
-		}
 		tmark = now
 
 		// Pool window size to handle resize
