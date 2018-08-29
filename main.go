@@ -11,7 +11,7 @@ var (
 	width  float64
 	height float64
 	rectX  = 20
-	rectY  = 20
+	rectY  = 60
 	step   = 20
 	debug  = true // If true, some debugging info is printed to the javascript console
 )
@@ -106,7 +106,10 @@ func main() {
 		ctx.Set("fillStyle", "lightgrey")
 		ctx.Call("fillRect", 1, 1, width-1, height-1)
 
-		// TODO: Other stuff
+		// Write a line about using the keyboard keys
+		ctx.Set("fillStyle", "blue")
+		ctx.Set("font", "24px serif")
+		ctx.Call("fillText", "Use the wasd, arrow, or numpad keys to move the square around.", 20, 40)
 
 		// Draw a simple square
 		ctx.Set("fillStyle", "black")
@@ -115,8 +118,10 @@ func main() {
 		ctx.Call("fillRect", rectX+rectWidth, rectY, 2, rectHeight+2)
 		ctx.Call("fillRect", rectX, rectY+rectHeight, rectWidth, 2)
 
-		// It seems kind of weird to recursively call itself here, instead of using a timer approach, but apparently
-		// this is best practise (at least in web environments: https://css-tricks.com/using-requestanimationframe)
+		// TODO: Whatever else
+
+		// It seems kind of weird (to me) to recursively call itself here, instead of using a timer approach, but
+		// apparently this is best practise (at least in web environments: https://css-tricks.com/using-requestanimationframe)
 		js.Global().Call("requestAnimationFrame", renderFrame)
 	})
 	defer renderFrame.Release()
