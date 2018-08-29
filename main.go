@@ -112,11 +112,15 @@ func main() {
 		ctx.Call("fillText", "Use the wasd, arrow, or numpad keys to move the square around.", 20, 40)
 
 		// Draw a simple square
-		ctx.Set("fillStyle", "black")
-		ctx.Call("fillRect", rectX, rectY, rectWidth, 2)
-		ctx.Call("fillRect", rectX, rectY, 2, rectHeight)
-		ctx.Call("fillRect", rectX+rectWidth, rectY, 2, rectHeight+2)
-		ctx.Call("fillRect", rectX, rectY+rectHeight, rectWidth, 2)
+		ctx.Call("beginPath")
+		ctx.Set("strokeStyle", "black")
+		ctx.Set("lineWidth", "2")
+		ctx.Call("moveTo", rectX, rectY)
+		ctx.Call("lineTo", rectX+rectWidth, rectY)
+		ctx.Call("lineTo", rectX+rectWidth, rectY+rectHeight)
+		ctx.Call("lineTo", rectX, rectY+rectHeight)
+		ctx.Call("closePath")
+		ctx.Call("stroke")
 
 		// TODO: Whatever else
 
