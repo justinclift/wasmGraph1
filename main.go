@@ -4,15 +4,14 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"syscall/js"
 )
 
 var (
 	width  float64
 	height float64
-	rectX  = 20
-	rectY  = 60
-	step   = 20
+	operationQueue = []string{"stuff"}
 	debug  = true // If true, some debugging info is printed to the javascript console
 )
 
@@ -35,52 +34,28 @@ func main() {
 		if debug {
 			fmt.Printf("Key is: %v\n", key)
 		}
-		switch key {
-		case "ArrowLeft":
-			rectX -= step
-		case "ArrowRight":
-			rectX += step
-		case "ArrowUp":
-			rectY -= step
-		case "ArrowDown":
-			rectY += step
-		case "a":
-			rectX -= step
-		case "d":
-			rectX += step
-		case "w":
-			rectY -= step
-		case "s":
-			rectY += step
-		case "A":
-			rectX -= step
-		case "D":
-			rectX += step
-		case "W":
-			rectY -= step
-		case "S":
-			rectY += step
-		case "4":
-			rectX -= step
-		case "6":
-			rectX += step
-		case "8":
-			rectY -= step
-		case "2":
-			rectY += step
-		case "7":
-			rectX -= step
-			rectY -= step
-		case "9":
-			rectX += step
-			rectY -= step
-		case "1":
-			rectX -= step
-			rectY += step
-		case "3":
-			rectX += step
-			rectY += step
-		}
+		//switch key {
+		//case "ArrowLeft", "a", "A", "4":
+		//	rectX -= step
+		//case "ArrowRight", "d", "D", "6":
+		//	rectX += step
+		//case "ArrowUp", "w", "W", "8":
+		//	rectY -= step
+		//case "ArrowDown", "s", "S", "2":
+		//	rectY += step
+		//case "7", "Home":
+		//	rectX -= step
+		//	rectY -= step
+		//case "9", "PageUp":
+		//	rectX += step
+		//	rectY -= step
+		//case "1", "End":
+		//	rectX -= step
+		//	rectY += step
+		//case "3", "PageDown":
+		//	rectX += step
+		//	rectY += step
+		//}
 	})
 	defer keypressEvt.Release()
 	doc.Call("addEventListener", "keydown", keypressEvt)
@@ -88,8 +63,6 @@ func main() {
 	done := make(chan struct{}, 0)
 
 	var renderFrame js.Callback
-	rectHeight := 30
-	rectWidth := 30
 	renderFrame = js.NewCallback(func(args []js.Value) {
 		// Handle window resizing
 		curBodyW := doc.Get("body").Get("clientWidth").Float()
@@ -100,27 +73,86 @@ func main() {
 			canvasEl.Set("height", height)
 		}
 
-		// ** Draw the frame content **
+		// ** Draw the graph area **
 
 		// Grey background
 		ctx.Set("fillStyle", "lightgrey")
 		ctx.Call("fillRect", 1, 1, width-1, height-1)
 
-		// Write a line about using the keyboard keys
-		ctx.Set("fillStyle", "blue")
-		ctx.Set("font", "24px serif")
-		ctx.Call("fillText", "Use the wasd, arrow, or numpad keys to move the square around.", 20, 40)
-
-		// Draw a simple square
+		// Draw border around the graph area
+		border := float64(2)
+		gap := float64(3)
+		left := border + gap
+		top := border + gap
+		graphWidth := width * 0.75
+		graphHeight := height -1
 		ctx.Call("beginPath")
 		ctx.Set("strokeStyle", "black")
 		ctx.Set("lineWidth", "2")
-		ctx.Call("moveTo", rectX, rectY)
-		ctx.Call("lineTo", rectX+rectWidth, rectY)
-		ctx.Call("lineTo", rectX+rectWidth, rectY+rectHeight)
-		ctx.Call("lineTo", rectX, rectY+rectHeight)
+		ctx.Call("moveTo", border, border)
+		ctx.Call("lineTo", graphWidth, border)
+		ctx.Call("lineTo", graphWidth, graphHeight)
+		ctx.Call("lineTo", border, graphHeight)
 		ctx.Call("closePath")
 		ctx.Call("stroke")
+
+		// Draw horizontal axis
+		ctx.Call("beginPath")
+		ctx.Set("strokeStyle", "black")
+		ctx.Set("lineWidth", "2")
+		ctx.Call("moveTo", left, graphHeight/2)
+		ctx.Call("lineTo", graphWidth-gap, graphHeight/2)
+		ctx.Call("stroke")
+
+		// Draw vertical axis
+		ctx.Call("beginPath")
+		ctx.Set("strokeStyle", "black")
+		ctx.Set("lineWidth", "2")
+		ctx.Call("moveTo", graphWidth/2, top)
+		ctx.Call("lineTo", graphWidth/2, graphHeight - gap)
+		ctx.Call("stroke")
+
+		// Draw horizontal markers
+		step := math.Min(width, height) / 30
+		markerPoint := graphHeight/2 - 5
+		for i := graphWidth/2; i < graphWidth - step; i += step {
+			ctx.Call("beginPath")
+			ctx.Set("strokeStyle", "black")
+			ctx.Set("lineWidth", "1")
+			ctx.Call("moveTo", i + step, markerPoint)
+			ctx.Call("lineTo", i + step, markerPoint + 10)
+			ctx.Call("stroke")
+		}
+		for i := graphWidth/2; i > left; i -= step {
+			ctx.Call("beginPath")
+			ctx.Set("strokeStyle", "black")
+			ctx.Set("lineWidth", "1")
+			ctx.Call("moveTo", i - step, markerPoint)
+			ctx.Call("lineTo", i - step, markerPoint + 10)
+			ctx.Call("stroke")
+		}
+
+		// Draw vertical markers
+		markerPoint = graphWidth/2 - 5
+		for i := graphHeight/2; i < graphHeight - step; i += step {
+			ctx.Call("beginPath")
+			ctx.Set("strokeStyle", "black")
+			ctx.Set("lineWidth", "1")
+			ctx.Call("moveTo", markerPoint, i + step)
+			ctx.Call("lineTo", markerPoint + 10, i + step)
+			ctx.Call("stroke")
+		}
+		for i := graphHeight/2; i > top; i -= step {
+			ctx.Call("beginPath")
+			ctx.Set("strokeStyle", "black")
+			ctx.Set("lineWidth", "1")
+			ctx.Call("moveTo", markerPoint, i - step)
+			ctx.Call("lineTo", markerPoint + 10, i - step)
+			ctx.Call("stroke")
+		}
+
+		// TODO: Maybe add axis label text every few points?
+
 
 		// TODO: Whatever else
 
