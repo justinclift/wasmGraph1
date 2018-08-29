@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"syscall/js"
 )
 
@@ -20,6 +21,29 @@ func main() {
 	canvasEl.Call("setAttribute", "width", width)
 	canvasEl.Call("setAttribute", "height", height)
 	ctx := canvasEl.Call("getContext", "2d")
+
+	var offset int
+	keypressEvt := js.NewCallback(func(args []js.Value) {
+		e := args[0]
+		//fmt.Printf("Stuff here: %v", args[0])
+		println("Hello, WebAssembly!")
+		key := e.Get("key").String()
+		//fmt.Printf("Event is of type: %v\n", e.Type())
+		//for i, j := range key {
+		//	fmt.Printf("Index %v, Value %v\n", i, j)
+		//}
+		fmt.Printf("Key is: %v\n", key)
+		//kbdType := kbd.InstanceOf("KeyboardObject")
+		//if kbdType {
+		//	println("Kbd is of type KeyboardObject")
+		//}
+		//fmt.Printf("stuff: %v\n", args[0])
+		//println(e)
+		offset+=1
+	})
+	defer keypressEvt.Release()
+	doc.Call("addEventListener", "keydown", keypressEvt)
+
 
 	done := make(chan struct{}, 0)
 
@@ -48,10 +72,10 @@ func main() {
 
 		// Draw a simple square
 		ctx.Set("fillStyle", "black")
-		ctx.Call("fillRect", rectX, rectY, rectWidth, 2)
-		ctx.Call("fillRect", rectX, rectY, 2, rectHeight)
-		ctx.Call("fillRect", rectX+rectWidth, rectY, 2, rectHeight+2)
-		ctx.Call("fillRect", rectX, rectY+rectHeight, rectWidth, 2)
+		ctx.Call("fillRect", offset + rectX, rectY, rectWidth, 2)
+		ctx.Call("fillRect", offset + rectX, rectY, 2, rectHeight)
+		ctx.Call("fillRect", offset + rectX+rectWidth, rectY, 2, rectHeight+2)
+		ctx.Call("fillRect", offset + rectX, rectY+rectHeight, rectWidth, 2)
 
 
 		// It seems kind of weird to recursively call itself here, instead of using a timer approach, but apparently
