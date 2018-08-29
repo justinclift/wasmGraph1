@@ -37,18 +37,20 @@ var (
 	width  float64
 	height float64
 	//debug  = true // If true, some debugging info is printed to the javascript console
+	rCall              js.Callback
+	ctx, doc, canvasEl js.Value
 )
 
 func main() {
 	// Initialise canvas
-	doc := js.Global().Get("document")
-	canvasEl := doc.Call("getElementById", "mycanvas")
+	doc = js.Global().Get("document")
+	canvasEl = doc.Call("getElementById", "mycanvas")
 	width = doc.Get("body").Get("clientWidth").Float()
 	height = doc.Get("body").Get("clientHeight").Float()
 	canvasEl.Call("setAttribute", "width", width)
 	canvasEl.Call("setAttribute", "height", height)
 	canvasEl.Set("tabIndex", 0) // Not sure if this is needed
-	ctx := canvasEl.Call("getContext", "2d")
+	ctx = canvasEl.Call("getContext", "2d")
 
 	// Seed the random generator (only used for colour generation), with a value that generates a "known ok" colour set
 	rand.Seed(7)
@@ -92,10 +94,19 @@ func main() {
 	//defer keypressEvt.Release()
 	//doc.Call("addEventListener", "keydown", keypressEvt)
 
-	done := make(chan struct{}, 0)
+	// Set the frame renderer going
+	rCall = js.NewCallback(renderFrame)
+	js.Global().Call("requestAnimationFrame", rCall)
+	defer rCall.Release()
 
-	var renderFrame js.Callback
-	renderFrame = js.NewCallback(func(args []js.Value) {
+	// Keeps the application running
+	done := make(chan struct{}, 0)
+	<-done
+}
+
+// Renders one frame of the animation
+func renderFrame(args []js.Value) {
+	{
 		// Handle window resizing
 		curBodyW := doc.Get("body").Get("clientWidth").Float()
 		curBodyH := doc.Get("body").Get("clientHeight").Float()
@@ -253,6 +264,9 @@ func main() {
 				ctx.Set("lineWidth", "1")
 				// setLineDash doesn't seem to work.  TODO: Figure out the right way to call this, as ctx.Call() outright fails
 				// https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/setLineDash
+				//ctx.Set("setLineDash", "{5, 15}")
+				//ctx.Set("setLineDash", "5, 15")
+				//ctx.Set("setLineDash", "(5, 15)")
 				//ctx.Set("setLineDash", "[5, 15]")
 				//ctx.Call("setLineDash", 5, 15)
 				ctx.Call("moveTo", px, py)
@@ -273,15 +287,8 @@ func main() {
 
 		// It seems kind of weird (to me) to recursively call itself here, instead of using a timer approach, but
 		// apparently this is best practise (at least in web environments: https://css-tricks.com/using-requestanimationframe)
-		js.Global().Call("requestAnimationFrame", renderFrame)
-	})
-	defer renderFrame.Release()
-
-	// Start running
-	js.Global().Call("requestAnimationFrame", renderFrame)
-
-	// Keeps the application running
-	<-done
+		js.Global().Call("requestAnimationFrame", rCall)
+	}
 }
 
 // Returns an object who's points have been transformed into 3D world space XYZ co-ordinates.  Also assigns numbers
