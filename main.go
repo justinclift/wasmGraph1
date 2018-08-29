@@ -3,15 +3,17 @@
 package main
 
 import (
+	"fmt"
 	"syscall/js"
 )
 
 var (
-	width      float64
-	height     float64
-	rectX      = 20
-	rectY      = 20
-	step       = 20
+	width  float64
+	height float64
+	rectX  = 20
+	rectY  = 20
+	step   = 20
+	debug  = true // If true, some debugging info is printed to the javascript console
 )
 
 func main() {
@@ -22,13 +24,17 @@ func main() {
 	height = doc.Get("body").Get("clientHeight").Float()
 	canvasEl.Call("setAttribute", "width", width)
 	canvasEl.Call("setAttribute", "height", height)
+	canvasEl.Set("tabIndex", 0) // Not sure if this is needed
 	ctx := canvasEl.Call("getContext", "2d")
 
 	// Simple keyboard handler for catching the arrow, WASD, and numpad keys
+	// Key value info can be found here: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
 	keypressEvt := js.NewCallback(func(args []js.Value) {
 		event := args[0]
 		key := event.Get("key").String()
-		//fmt.Printf("Key is: %v\n", key)
+		if debug {
+			fmt.Printf("Key is: %v\n", key)
+		}
 		switch key {
 		case "ArrowLeft":
 			rectX -= step
@@ -108,7 +114,6 @@ func main() {
 		ctx.Call("fillRect", rectX, rectY, 2, rectHeight)
 		ctx.Call("fillRect", rectX+rectWidth, rectY, 2, rectHeight+2)
 		ctx.Call("fillRect", rectX, rectY+rectHeight, rectWidth, 2)
-
 
 		// It seems kind of weird to recursively call itself here, instead of using a timer approach, but apparently
 		// this is best practise (at least in web environments: https://css-tricks.com/using-requestanimationframe)
