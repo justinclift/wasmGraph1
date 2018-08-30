@@ -338,10 +338,10 @@ func renderFrame(args []js.Value) {
 				py = centerY + ((l.Y * step) * -1)
 				ctx.Set("fillStyle", fmt.Sprintf("rgb(%d, %d, %d)", l.Colour[0], l.Colour[1], l.Colour[2]))
 				ctx.Call("beginPath")
-				ctx.Call("arc", px, py, 5, 0, 2*math.Pi)
+				ctx.Call("arc", px, py, 1, 0, 2*math.Pi)
 				ctx.Call("fill")
 
-				// Label the point on the axis
+				// Label the point on the graph
 				ctx.Set("fillStyle", "black")
 				ctx.Set("font", "12px sans-serif")
 				ctx.Call("fillText", fmt.Sprintf("Point %d", l.Num), px+5, py+15)
