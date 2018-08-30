@@ -6,7 +6,7 @@ various rotation, scale, and transform operations on them (via matrix transforms
 No backface culling (yet), so the rear edges can be seen through the objects, this is
 just a super simple test for the moment. :wink:
 
-Use the wasd, arrow, or numpad keys to move the square around.  <-- not yet implemented
+Use the wasd, arrow, or numpad keys to rotate the objects around the origin.
 
 Note - The code for this started from https://github.com/stdiopt/gowasm-experiments,
 and has been fairly radically reworked from there. :smile:

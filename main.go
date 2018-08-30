@@ -37,6 +37,8 @@ const (
 
 type Operation struct {
 	op OperationType
+	t  int32 // Number of milliseconds the operation should take
+	f  int32 // Number of display frames the operation should be broken into
 	X  float64
 	Y  float64
 	Z  float64
@@ -156,12 +158,12 @@ func main() {
 	worldSpace["ob3"] = importObject(object3, -3.0, 0.0, -1.0)
 
 	// Add some transformation operations to the queue
-	queue <- Operation{op: ROTATE, X: 0, Y: 0, Z: 90}
-	queue <- Operation{op: SCALE, X: 2.0, Y: 2.0, Z: 2.0}
-	queue <- Operation{op: TRANSLATE, X: -3, Y: 0, Z: 0}
-	queue <- Operation{op: ROTATE, X: 0, Y: 360, Z: 0}
-	queue <- Operation{op: SCALE, X: 0.5, Y: 0.5, Z: 0.5}
-	queue <- Operation{op: TRANSLATE, X: 3, Y: 0, Z: 0}
+	queue <- Operation{op: ROTATE, t: 1000, f: 60, X: 0, Y: 0, Z: 90}
+	queue <- Operation{op: SCALE, t: 1000, f: 60, X: 2.0, Y: 2.0, Z: 2.0}
+	queue <- Operation{op: TRANSLATE, t: 1000, f: 60, X: -3, Y: 0, Z: 0}
+	//queue <- Operation{op: ROTATE, t: 1000, f: 60, X: 0, Y: 360, Z: 0}
+	//queue <- Operation{op: SCALE, t: 1000, f: 60, X: 0.5, Y: 0.5, Z: 0.5}
+	//queue <- Operation{op: TRANSLATE, t: 1000, f: 60, X: 3, Y: 0, Z: 0}
 
 	// Keep the application running
 	done := make(chan struct{}, 0)
@@ -171,7 +173,7 @@ func main() {
 // Animates the transformation operations
 func processOperations(queue <-chan Operation) {
 	for i := range queue {
-		parts := 60                      // Number of parts to break each transformation into
+		parts := i.f                     // Number of parts to break each transformation into
 		transformMatrix = identityMatrix // Reset the transform matrix
 		switch i.op {
 		case ROTATE: // Rotate the objects in world space
@@ -209,8 +211,9 @@ func processOperations(queue <-chan Operation) {
 		}
 
 		// Apply each transformation, one small part at a time (this gives the animation effect)
-		for t := 0; t < parts; t++ {
-			time.Sleep(time.Millisecond * time.Duration(1000/parts))
+		timeSlice := time.Millisecond * time.Duration(i.t/parts)
+		for t := 0; t < int(parts); t++ {
+			time.Sleep(timeSlice)
 			for j, o := range worldSpace {
 				var newPoints []Point
 				for _, j := range o.P {
@@ -220,7 +223,7 @@ func processOperations(queue <-chan Operation) {
 				worldSpace[j] = o
 			}
 		}
-		opText = "Complete"
+		opText = "Complete. Rotate with WASD or numpad."
 	}
 }
 
@@ -234,21 +237,21 @@ func keypressHander(args []js.Value) {
 	}
 	switch key {
 	case "ArrowLeft", "a", "A", "4":
-		queue <- Operation{op: ROTATE, X: 0, Y: -30, Z: 0}
+		queue <- Operation{op: ROTATE, t: 100, f: 12, X: 0, Y: -30, Z: 0}
 	case "ArrowRight", "d", "D", "6":
-		queue <- Operation{op: ROTATE, X: 0, Y: 30, Z: 0}
+		queue <- Operation{op: ROTATE, t: 100, f: 12, X: 0, Y: 30, Z: 0}
 	case "ArrowUp", "w", "W", "8":
-		queue <- Operation{op: ROTATE, X: -30, Y: 0, Z: 0}
+		queue <- Operation{op: ROTATE, t: 100, f: 12, X: -30, Y: 0, Z: 0}
 	case "ArrowDown", "s", "S", "2":
-		queue <- Operation{op: ROTATE, X: 30, Y: 0, Z: 0}
+		queue <- Operation{op: ROTATE, t: 100, f: 12, X: 30, Y: 0, Z: 0}
 	case "7", "Home":
-		queue <- Operation{op: ROTATE, X: -30, Y: -30, Z: 0}
+		queue <- Operation{op: ROTATE, t: 100, f: 12, X: -30, Y: -30, Z: 0}
 	case "9", "PageUp":
-		queue <- Operation{op: ROTATE, X: -30, Y: 30, Z: 0}
+		queue <- Operation{op: ROTATE, t: 100, f: 12, X: -30, Y: 30, Z: 0}
 	case "1", "End":
-		queue <- Operation{op: ROTATE, X: 30, Y: -30, Z: 0}
+		queue <- Operation{op: ROTATE, t: 100, f: 12, X: 30, Y: -30, Z: 0}
 	case "3", "PageDown":
-		queue <- Operation{op: ROTATE, X: 30, Y: 30, Z: 0}
+		queue <- Operation{op: ROTATE, t: 100, f: 12, X: 30, Y: 30, Z: 0}
 	}
 }
 
