@@ -19,7 +19,12 @@ type Point struct {
 	Z      float64
 }
 
-type Object []Point
+type Edge []int
+
+type Object struct {
+	P []Point
+	E []Edge // List of points to connect by edges
+}
 
 type OperationType int
 
@@ -41,22 +46,51 @@ var (
 
 	// The point objects
 	object1 = Object{
-		{X: 0, Y: 1.75, Z: 1.0},
-		{X: 1.5, Y: -1.75, Z: 1.0},
-		{X: -1.5, Y: -1.75, Z: 1.0},
-		{X: 0, Y: 0, Z: 1.75},
+		P: []Point{
+			{X: 0, Y: 1.75, Z: 1.0},
+			{X: 1.5, Y: -1.75, Z: 1.0},
+			{X: -1.5, Y: -1.75, Z: 1.0},
+			{X: 0, Y: 0, Z: 1.75},
+		},
+		E: []Edge{
+			{0, 1},
+			{0, 2},
+			{1, 2},
+			{0, 3},
+			{1, 3},
+			{2, 3},
+		},
 	}
 	object2 = Object{
-		{X: 1.5, Y: 1.5, Z: -1.0},
-		{X: 1.5, Y: -1.5, Z: -1.0},
-		{X: -1.5, Y: -1.5, Z: -1.0},
+		P: []Point{
+			{X: 1.5, Y: 1.5, Z: -1.0},
+			{X: 1.5, Y: -1.5, Z: -1.0},
+			{X: -1.5, Y: -1.5, Z: -1.0},
+		},
+		E: []Edge{
+			{0, 1},
+			{1, 2},
+			{2, 0},
+		},
 	}
 	object3 = Object{
-		{X: 2, Y: -2, Z: 1.0},
-		{X: 2, Y: -4, Z: 1.0},
-		{X: -2, Y: -4, Z: 1.0},
-		{X: -2, Y: -2, Z: 1.0},
-		{X: 0, Y: -3, Z: 2.5},
+		P: []Point{
+			{X: 2, Y: -2, Z: 1.0},
+			{X: 2, Y: -4, Z: 1.0},
+			{X: -2, Y: -4, Z: 1.0},
+			{X: -2, Y: -2, Z: 1.0},
+			{X: 0, Y: -3, Z: 2.5},
+		},
+		E: []Edge{
+			{0, 1},
+			{1, 2},
+			{2, 3},
+			{3, 0},
+			{0, 4},
+			{1, 4},
+			{2, 4},
+			{3, 4},
+		},
 	}
 
 	// Super simple FIFO queue, to store operations
@@ -262,66 +296,21 @@ func renderFrame(args []js.Value) {
 
 		// Draw the points
 		var pointNum int
+		var px, py float64
 		for _, o := range worldSpace {
-			for k, l := range o {
-
+			for _, l := range o.P {
 				// Draw the coloured dot for the point
-				px := centerX + (l.X * step)
-				py := centerY + ((l.Y * step) * -1)
+				px = centerX + (l.X * step)
+				py = centerY + ((l.Y * step) * -1)
 				ctx.Set("fillStyle", fmt.Sprintf("rgb(%d, %d, %d)", l.Colour[0], l.Colour[1], l.Colour[2]))
 				ctx.Call("beginPath")
 				ctx.Call("arc", px, py, 5, 0, 2*math.Pi)
 				ctx.Call("fill")
+
+				// Label the point on the axis
 				ctx.Set("fillStyle", "black")
 				ctx.Set("font", "12px sans-serif")
 				ctx.Call("fillText", fmt.Sprintf("Point %d", l.Num), px+5, py+15)
-
-				// Draw lines between the points
-				ctx.Set("strokeStyle", "black")
-				ctx.Set("lineWidth", "1")
-				ctx.Call("setLineDash", []interface{}{2, 4})
-				var tx, ty float64
-				if k == 0 {
-					if len(o) >= 4 {
-						// TODO: This is just a dodgy workaround while testing.  Would be good to figure out a better approach.
-						//       Maybe instead of using just Points, use a structure that also defines edges? .obj files
-						//       take this approach
-						tx = centerX + (o[len(o)-2].X * step)
-						ty = centerY + ((o[len(o)-2].Y * step) * -1)
-						ctx.Call("beginPath")
-						ctx.Call("moveTo", px, py)
-						ctx.Call("lineTo", tx, ty)
-						ctx.Call("stroke")
-
-						px := centerX + (o[1].X * step)
-						py := centerY + ((o[1].Y * step) * -1)
-						tx = centerX + (o[len(o)-1].X * step)
-						ty = centerY + ((o[len(o)-1].Y * step) * -1)
-						ctx.Call("beginPath")
-						ctx.Call("moveTo", px, py)
-						ctx.Call("lineTo", tx, ty)
-						ctx.Call("stroke")
-					}
-					if len(o) == 5 {
-						px := centerX + (o[2].X * step)
-						py := centerY + ((o[2].Y * step) * -1)
-						tx = centerX + (o[len(o)-1].X * step)
-						ty = centerY + ((o[len(o)-1].Y * step) * -1)
-						ctx.Call("beginPath")
-						ctx.Call("moveTo", px, py)
-						ctx.Call("lineTo", tx, ty)
-						ctx.Call("stroke")
-					}
-					tx = centerX + (o[len(o)-1].X * step)
-					ty = centerY + ((o[len(o)-1].Y * step) * -1)
-				} else {
-					tx = centerX + (o[k-1].X * step)
-					ty = centerY + ((o[k-1].Y * step) * -1)
-				}
-				ctx.Call("beginPath")
-				ctx.Call("moveTo", px, py)
-				ctx.Call("lineTo", tx, ty)
-				ctx.Call("stroke")
 
 				// Draw darker coloured legend text
 				ctx.Set("font", "bold 14px serif")
@@ -334,8 +323,26 @@ func renderFrame(args []js.Value) {
 			}
 		}
 
+		// Draw the edges
+		ctx.Set("strokeStyle", "black")
+		ctx.Set("lineWidth", "1")
+		ctx.Call("setLineDash", []interface{}{2, 4})
+		var point1X, point1Y, point2X, point2Y float64
+		for _, o := range worldSpace {
+			for _, l := range o.E {
+				point1X = o.P[l[0]].X
+				point1Y = o.P[l[0]].Y
+				point2X = o.P[l[1]].X
+				point2Y = o.P[l[1]].Y
+				ctx.Call("beginPath")
+				ctx.Call("moveTo", centerX+(point1X*step), centerY+((point1Y*step)*-1))
+				ctx.Call("lineTo", centerX+(point2X*step), centerY+((point2Y*step)*-1))
+				ctx.Call("stroke")
+			}
+		}
+
 		// It seems kind of weird (to me) to recursively call itself here, instead of using a timer approach, but
-		// apparently this is best practise (at least in web environments: https://css-tricks.com/using-requestanimationframe)
+		// apparently this is best practise, at least in web environments: https://css-tricks.com/using-requestanimationframe
 		js.Global().Call("requestAnimationFrame", rCall)
 	}
 }
@@ -351,8 +358,9 @@ func importObject(ob Object, x float64, y float64, z float64) (translatedObject 
 		0, 0, 0, 1,
 	}
 
-	for _, j := range ob {
-		translatedObject = append(translatedObject, Point{
+	// Translate the points
+	for _, j := range ob.P {
+		translatedObject.P = append(translatedObject.P, Point{
 			Colour: [3]int{rand.Intn(255), rand.Intn(255), rand.Intn(255)},
 			Num:    pointCounter,
 			X:      (translateMatrix[0] * j.X) + (translateMatrix[1] * j.Y) + (translateMatrix[2] * j.Z) + (translateMatrix[3] * 1),   // 1st col, top
@@ -361,6 +369,12 @@ func importObject(ob Object, x float64, y float64, z float64) (translatedObject 
 		})
 		pointCounter++
 	}
+
+	// Copy the edge definitions across
+	for _, j := range ob.E {
+		translatedObject.E = append(translatedObject.E, j)
+	}
+
 	return translatedObject
 }
 
