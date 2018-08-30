@@ -239,9 +239,9 @@ func keypressHander(args []js.Value) {
 	case "ArrowRight", "d", "D", "6":
 		queue <- Operation{op: ROTATE, X: 0, Y: 30, Z: 0}
 	case "ArrowUp", "w", "W", "8":
-		queue <- Operation{op: ROTATE, X: 0, Y: 0, Z: 30}
+		queue <- Operation{op: ROTATE, X: -30, Y: 0, Z: 0}
 	case "ArrowDown", "s", "S", "2":
-		queue <- Operation{op: ROTATE, X: 0, Y: 0, Z: 30}
+		queue <- Operation{op: ROTATE, X: 30, Y: 0, Z: 0}
 		//case "7", "Home":
 		//	rectX -= step
 		//	rectY -= step
@@ -514,8 +514,8 @@ func rotateAroundX(m matrix, degrees float64) matrix {
 	rad := (math.Pi / 180) * degrees // The Go math functions use radians, so we convert degrees to radians
 	rotateXMatrix := matrix{
 		1, 0, 0, 0,
-		math.Cos(rad), 0, -math.Sin(rad), 0,
-		math.Sin(rad), 0, math.Cos(rad), 0,
+		0, math.Cos(rad), -math.Sin(rad), 0,
+		0, math.Sin(rad), math.Cos(rad), 0,
 		0, 0, 0, 1,
 	}
 	return matrixMult(rotateXMatrix, m)
