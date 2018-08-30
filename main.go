@@ -35,8 +35,10 @@ const (
 )
 
 type Operation struct {
-	op   OperationType
-	data []interface{}
+	op OperationType
+	X  float64
+	Y  float64
+	Z  float64
 }
 
 var (
@@ -47,30 +49,30 @@ var (
 	// The point objects
 	object1 = Object{
 		P: []Point{
-			{X: 0, Y: 1.75, Z: 1.0},
-			{X: 1.5, Y: -1.75, Z: 1.0},
+			{X: 0, Y: 1.75, Z: 1.0},    // Point 0 for this object
+			{X: 1.5, Y: -1.75, Z: 1.0}, // Point 1 for this object
 			{X: -1.5, Y: -1.75, Z: 1.0},
 			{X: 0, Y: 0, Z: 1.75},
 		},
 		E: []Edge{
-			{0, 1},
-			{0, 2},
-			{1, 2},
-			{0, 3},
+			{0, 1}, // Connect point 0 to point 1
+			{0, 2}, // Connect point 0 to point 2
+			{1, 2}, // Connect point 1 to point 2
+			{0, 3}, // etc
 			{1, 3},
 			{2, 3},
 		},
 	}
 	object2 = Object{
 		P: []Point{
-			{X: 1.5, Y: 1.5, Z: -1.0},
-			{X: 1.5, Y: -1.5, Z: -1.0},
+			{X: 1.5, Y: 1.5, Z: -1.0},  // Point 0 for this object
+			{X: 1.5, Y: -1.5, Z: -1.0}, // Point 1 for this object
 			{X: -1.5, Y: -1.5, Z: -1.0},
 		},
 		E: []Edge{
-			{0, 1},
-			{1, 2},
-			{2, 0},
+			{0, 1}, // Connect point 0 to point 1
+			{1, 2}, // Connect point 1 to point 2
+			{2, 0}, // etc
 		},
 	}
 	object3 = Object{
@@ -91,6 +93,14 @@ var (
 			{2, 4},
 			{3, 4},
 		},
+	}
+
+	// Initialise the transform matrix with the 4x4 identity matrix
+	transformMatrix = matrix{
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1,
 	}
 
 	// Super simple FIFO queue, to store operations
@@ -126,6 +136,9 @@ func main() {
 	js.Global().Call("requestAnimationFrame", rCall)
 	defer rCall.Release()
 
+	// TODO: Look into clip regions, so things outside the graph area aren't drawn
+	//       This probably means we have to draw the point info table on the right differently too
+
 	// Add some objects to the world space
 	worldSpace = make(map[string]Object, 1)
 	worldSpace["ob1"] = importObject(object1, 3.0, 3.0, 0.0)
@@ -133,11 +146,49 @@ func main() {
 	worldSpace["ob2"] = importObject(object2, 3.0, -3.0, 1.0)
 	worldSpace["ob3"] = importObject(object3, -3.0, 0.0, -1.0)
 
-	// TODO: Add some transformation operations to the queue
+	// Add some transformation operations to the queue
+	queue = append(queue, Operation{op: ROTATE, X: 0, Y: 0, Z: 45})
+	queue = append(queue, Operation{op: SCALE, X: 1.5, Y: 1.5, Z: 1.52})
+	queue = append(queue, Operation{op: TRANSLATE, X: 0, Y: 0, Z: 0})
 
 	// TODO: Add a callback timer to schedule the transformations on the objects (split into n pieces each, so they animates)
+	//       This is the thing which should process the operations queue
+	for _, i := range queue {
+		switch i.op {
+		case ROTATE:
+			// Rotate the objects in world space
+			fmt.Printf("Rotation amount; X: %v, Y: %v, Z: %v\n", i.X, i.Y, i.Z)
+			if i.X != 0 {
+				transformMatrix = rotateAroundX(transformMatrix, i.X)
+			}
+			if i.Y != 0 {
+				transformMatrix = rotateAroundY(transformMatrix, i.Y)
+			}
+			if i.Z != 0 {
+				transformMatrix = rotateAroundZ(transformMatrix, i.Z)
+			}
+		case SCALE:
+			// Scale the objects in world space
+			fmt.Printf("Scale amount; X: %v, Y: %v, Z: %v\n", i.X, i.Y, i.Z)
+			transformMatrix = scale(transformMatrix, i.X, i.Y, i.Z)
+		case TRANSLATE:
+			// Translate (move) the objects in world space
+			fmt.Printf("Translate amount; X: %v, Y: %v, Z: %v\n", i.X, i.Y, i.Z)
+			transformMatrix = translate(transformMatrix, i.X, i.Y, i.Z)
+		}
 
-	// Keeps the application running
+		// Apply the transformation matrix to the points in the world space
+		for j, o := range worldSpace {
+			var newPoints []Point
+			for _, j := range o.P {
+				newPoints = append(newPoints, transform(transformMatrix, j))
+			}
+			o.P = newPoints
+			worldSpace[j] = o
+		}
+	}
+
+	// Keep the application running
 	done := make(chan struct{}, 0)
 	<-done
 }
