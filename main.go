@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	"math"
-	"math/rand"
 	"syscall/js"
 	"time"
 )
@@ -13,11 +12,10 @@ import (
 type matrix []float64
 
 type Point struct {
-	Colour [3]int
-	Num    int
-	X      float64
-	Y      float64
-	Z      float64
+	Num int
+	X   float64
+	Y   float64
+	Z   float64
 }
 
 type Edge []int
@@ -129,9 +127,6 @@ func main() {
 	canvasEl.Call("setAttribute", "height", height)
 	canvasEl.Set("tabIndex", 0) // Not sure if this is needed
 	ctx = canvasEl.Call("getContext", "2d")
-
-	// Seed the random generator (only used for colour generation), with a value that generates a "known ok" colour set
-	rand.Seed(3)
 
 	// Set up the keypress handler
 	kCall = js.NewCallback(keypressHander)
@@ -336,7 +331,7 @@ func renderFrame(args []js.Value) {
 				// Draw the coloured dot for the point
 				px = centerX + (l.X * step)
 				py = centerY + ((l.Y * step) * -1)
-				ctx.Set("fillStyle", fmt.Sprintf("rgb(%d, %d, %d)", l.Colour[0], l.Colour[1], l.Colour[2]))
+				ctx.Set("fillStyle", "black")
 				ctx.Call("beginPath")
 				ctx.Call("arc", px, py, 1, 0, 2*math.Pi)
 				ctx.Call("fill")
@@ -401,11 +396,10 @@ func importObject(ob Object, x float64, y float64, z float64) (translatedObject 
 	// Translate the points
 	for _, j := range ob.P {
 		translatedObject.P = append(translatedObject.P, Point{
-			Colour: [3]int{rand.Intn(255), rand.Intn(255), rand.Intn(255)},
-			Num:    pointCounter,
-			X:      (translateMatrix[0] * j.X) + (translateMatrix[1] * j.Y) + (translateMatrix[2] * j.Z) + (translateMatrix[3] * 1),   // 1st col, top
-			Y:      (translateMatrix[4] * j.X) + (translateMatrix[5] * j.Y) + (translateMatrix[6] * j.Z) + (translateMatrix[7] * 1),   // 1st col, upper middle
-			Z:      (translateMatrix[8] * j.X) + (translateMatrix[9] * j.Y) + (translateMatrix[10] * j.Z) + (translateMatrix[11] * 1), // 1st col, lower middle
+			Num: pointCounter,
+			X:   (translateMatrix[0] * j.X) + (translateMatrix[1] * j.Y) + (translateMatrix[2] * j.Z) + (translateMatrix[3] * 1),   // 1st col, top
+			Y:   (translateMatrix[4] * j.X) + (translateMatrix[5] * j.Y) + (translateMatrix[6] * j.Z) + (translateMatrix[7] * 1),   // 1st col, upper middle
+			Z:   (translateMatrix[8] * j.X) + (translateMatrix[9] * j.Y) + (translateMatrix[10] * j.Z) + (translateMatrix[11] * 1), // 1st col, lower middle
 		})
 		pointCounter++
 	}
@@ -538,7 +532,6 @@ func transform(m matrix, p Point) (t Point) {
 	//bot2 := m[14]
 	//bot3 := m[15]
 
-	t.Colour = p.Colour
 	t.Num = p.Num
 	t.X = (top0 * p.X) + (top1 * p.Y) + (top2 * p.Z) + top3
 	t.Y = (upperMid0 * p.X) + (upperMid1 * p.Y) + (upperMid2 * p.Z) + upperMid3
