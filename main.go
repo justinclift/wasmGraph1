@@ -107,8 +107,8 @@ var (
 	// Initialise the transform matrix with the identity matrix
 	transformMatrix = identityMatrix
 
-	// Super simple FIFO queue, to store operations
-	queue []Operation
+	// FIFO queue
+	queue chan Operation
 
 	width, height      float64
 	kCall, rCall       js.Callback
@@ -141,6 +141,10 @@ func main() {
 	js.Global().Call("requestAnimationFrame", rCall)
 	defer rCall.Release()
 
+	// Set the operations processor going
+	queue = make(chan Operation, 3)
+	go processOperations(queue)
+
 	// TODO: Look into clip regions, so things outside the graph area aren't drawn
 	//       This probably means we have to draw the point info table on the right differently too
 
@@ -152,15 +156,21 @@ func main() {
 	worldSpace["ob3"] = importObject(object3, -3.0, 0.0, -1.0)
 
 	// Add some transformation operations to the queue
-	queue = append(queue, Operation{op: ROTATE, X: 0, Y: 0, Z: 90})
-	queue = append(queue, Operation{op: SCALE, X: 2.0, Y: 2.0, Z: 2.0})
-	queue = append(queue, Operation{op: TRANSLATE, X: -3, Y: 0, Z: 0})
-	queue = append(queue, Operation{op: ROTATE, X: 0, Y: 360, Z: 0})
-	queue = append(queue, Operation{op: SCALE, X: 0.5, Y: 0.5, Z: 0.5})
-	queue = append(queue, Operation{op: TRANSLATE, X: 3, Y: 0, Z: 0})
+	queue <- Operation{op: ROTATE, X: 0, Y: 0, Z: 90}
+	queue <- Operation{op: SCALE, X: 2.0, Y: 2.0, Z: 2.0}
+	queue <- Operation{op: TRANSLATE, X: -3, Y: 0, Z: 0}
+	queue <- Operation{op: ROTATE, X: 0, Y: 360, Z: 0}
+	queue <- Operation{op: SCALE, X: 0.5, Y: 0.5, Z: 0.5}
+	queue <- Operation{op: TRANSLATE, X: 3, Y: 0, Z: 0}
 
-	// Animate the transformation operations
-	for _, i := range queue {
+	// Keep the application running
+	done := make(chan struct{}, 0)
+	<-done
+}
+
+// Animates the transformation operations
+func processOperations(queue <-chan Operation) {
+	for i := range queue {
 		parts := 60                      // Number of parts to break each transformation into
 		transformMatrix = identityMatrix // Reset the transform matrix
 		switch i.op {
@@ -210,12 +220,8 @@ func main() {
 				worldSpace[j] = o
 			}
 		}
+		opText = "Complete"
 	}
-	opText = "Complete"
-
-	// Keep the application running
-	done := make(chan struct{}, 0)
-	<-done
 }
 
 // Simple keyboard handler for catching the arrow, WASD, and numpad keys
@@ -227,28 +233,28 @@ func keypressHander(args []js.Value) {
 		fmt.Printf("Key is: %v\n", key)
 	}
 	// TODO: Use key presses to rotate the view around the world space origin
-	//switch key {
-	//case "ArrowLeft", "a", "A", "4":
-	//	rectX -= step
-	//case "ArrowRight", "d", "D", "6":
-	//	rectX += step
-	//case "ArrowUp", "w", "W", "8":
-	//	rectY -= step
-	//case "ArrowDown", "s", "S", "2":
-	//	rectY += step
-	//case "7", "Home":
-	//	rectX -= step
-	//	rectY -= step
-	//case "9", "PageUp":
-	//	rectX += step
-	//	rectY -= step
-	//case "1", "End":
-	//	rectX -= step
-	//	rectY += step
-	//case "3", "PageDown":
-	//	rectX += step
-	//	rectY += step
-	//}
+	switch key {
+	case "ArrowLeft", "a", "A", "4":
+		queue <- Operation{op: ROTATE, X: 0, Y: -30, Z: 0}
+	case "ArrowRight", "d", "D", "6":
+		queue <- Operation{op: ROTATE, X: 0, Y: 30, Z: 0}
+	case "ArrowUp", "w", "W", "8":
+		queue <- Operation{op: ROTATE, X: 0, Y: 0, Z: 30}
+	case "ArrowDown", "s", "S", "2":
+		queue <- Operation{op: ROTATE, X: 0, Y: 0, Z: 30}
+		//case "7", "Home":
+		//	rectX -= step
+		//	rectY -= step
+		//case "9", "PageUp":
+		//	rectX += step
+		//	rectY -= step
+		//case "1", "End":
+		//	rectX -= step
+		//	rectY += step
+		//case "3", "PageDown":
+		//	rectX += step
+		//	rectY += step
+	}
 }
 
 // Renders one frame of the animation
