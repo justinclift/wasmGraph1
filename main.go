@@ -21,6 +21,19 @@ type Point struct {
 
 type Object []Point
 
+type OperationType int
+
+const (
+	ROTATE OperationType = iota
+	SCALE
+	TRANSLATE
+)
+
+type Operation struct {
+	op   Operation
+	data []interface{}
+}
+
 var (
 	// The empty world space
 	worldSpace   map[string]Object
@@ -46,10 +59,13 @@ var (
 		{X: 0, Y: -3, Z: 2.5},
 	}
 
+	// FIFO queue, to store operations in order
+	queue []Operation
+
 	width, height      float64
-	rCall              js.Callback
+	kCall, rCall       js.Callback
 	ctx, doc, canvasEl js.Value
-	//debug  = true // If true, some debugging info is printed to the javascript console
+	debug              = true // If true, some debugging info is printed to the javascript console
 )
 
 func main() {
@@ -66,6 +82,16 @@ func main() {
 	// Seed the random generator (only used for colour generation), with a value that generates a "known ok" colour set
 	rand.Seed(3)
 
+	// Set up the keypress handler
+	kCall = js.NewCallback(keypressHander)
+	doc.Call("addEventListener", "keydown", kCall)
+	defer kCall.Release()
+
+	// Set the frame renderer going
+	rCall = js.NewCallback(renderFrame)
+	js.Global().Call("requestAnimationFrame", rCall)
+	defer rCall.Release()
+
 	// Add some objects to the world space
 	worldSpace = make(map[string]Object, 1)
 	worldSpace["ob1"] = importObject(object1, 3.0, 3.0, 0.0)
@@ -73,49 +99,46 @@ func main() {
 	worldSpace["ob2"] = importObject(object2, 3.0, -3.0, 1.0)
 	worldSpace["ob3"] = importObject(object3, -3.0, 0.0, -1.0)
 
-	//// Simple keyboard handler for catching the arrow, WASD, and numpad keys
-	//// Key value info can be found here: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
-	//keypressEvt := js.NewCallback(func(args []js.Value) {
-	//	event := args[0]
-	//	key := event.Get("key").String()
-	//	if debug {
-	//		fmt.Printf("Key is: %v\n", key)
-	//	}
-	//	// TODO: Use key presses to rotate the view around the world space origin
-	//	//switch key {
-	//	//case "ArrowLeft", "a", "A", "4":
-	//	//	rectX -= step
-	//	//case "ArrowRight", "d", "D", "6":
-	//	//	rectX += step
-	//	//case "ArrowUp", "w", "W", "8":
-	//	//	rectY -= step
-	//	//case "ArrowDown", "s", "S", "2":
-	//	//	rectY += step
-	//	//case "7", "Home":
-	//	//	rectX -= step
-	//	//	rectY -= step
-	//	//case "9", "PageUp":
-	//	//	rectX += step
-	//	//	rectY -= step
-	//	//case "1", "End":
-	//	//	rectX -= step
-	//	//	rectY += step
-	//	//case "3", "PageDown":
-	//	//	rectX += step
-	//	//	rectY += step
-	//	//}
-	//})
-	//defer keypressEvt.Release()
-	//doc.Call("addEventListener", "keydown", keypressEvt)
+	// TODO: Add some transformation operations to the queue
 
-	// Set the frame renderer going
-	rCall = js.NewCallback(renderFrame)
-	js.Global().Call("requestAnimationFrame", rCall)
-	defer rCall.Release()
+	// TODO: Add a callback timer to schedule the transformations on the objects (split into n pieces each, so they animates)
 
 	// Keeps the application running
 	done := make(chan struct{}, 0)
 	<-done
+}
+
+// Simple keyboard handler for catching the arrow, WASD, and numpad keys
+// Key value info can be found here: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
+func keypressHander(args []js.Value) {
+	event := args[0]
+	key := event.Get("key").String()
+	if debug {
+		fmt.Printf("Key is: %v\n", key)
+	}
+	// TODO: Use key presses to rotate the view around the world space origin
+	//switch key {
+	//case "ArrowLeft", "a", "A", "4":
+	//	rectX -= step
+	//case "ArrowRight", "d", "D", "6":
+	//	rectX += step
+	//case "ArrowUp", "w", "W", "8":
+	//	rectY -= step
+	//case "ArrowDown", "s", "S", "2":
+	//	rectY += step
+	//case "7", "Home":
+	//	rectX -= step
+	//	rectY -= step
+	//case "9", "PageUp":
+	//	rectX += step
+	//	rectY -= step
+	//case "1", "End":
+	//	rectX -= step
+	//	rectY += step
+	//case "3", "PageDown":
+	//	rectX += step
+	//	rectY += step
+	//}
 }
 
 // Renders one frame of the animation
