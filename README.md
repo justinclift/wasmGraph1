@@ -1,6 +1,6 @@
 A simple experiment with Go Wasm on the HTML5 Canvas (2D).
 
-This renders several basic objects from 3D space onto the 2d canvas, performing
+This renders several basic objects from 3D space onto the 2D canvas, performing
 various rotation, scale, and transform operations on them (via matrix transforms).
 
 No backface culling (yet), so the rear edges can be seen through the objects, this is

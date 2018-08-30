@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"syscall/js"
+	"time"
 )
 
 type matrix []float64
@@ -95,13 +96,16 @@ var (
 		},
 	}
 
-	// Initialise the transform matrix with the 4x4 identity matrix
-	transformMatrix = matrix{
+	// The 4x4 identify matrix
+	identityMatrix = matrix{
 		1, 0, 0, 0,
 		0, 1, 0, 0,
 		0, 0, 1, 0,
 		0, 0, 0, 1,
 	}
+
+	// Initialise the transform matrix with the identity matrix
+	transformMatrix = identityMatrix
 
 	// Super simple FIFO queue, to store operations
 	queue []Operation
@@ -109,6 +113,7 @@ var (
 	width, height      float64
 	kCall, rCall       js.Callback
 	ctx, doc, canvasEl js.Value
+	opText             string
 	debug              = true // If true, some debugging info is printed to the javascript console
 )
 
@@ -147,46 +152,66 @@ func main() {
 	worldSpace["ob3"] = importObject(object3, -3.0, 0.0, -1.0)
 
 	// Add some transformation operations to the queue
-	queue = append(queue, Operation{op: ROTATE, X: 0, Y: 0, Z: 45})
-	queue = append(queue, Operation{op: SCALE, X: 1.5, Y: 1.5, Z: 1.52})
-	queue = append(queue, Operation{op: TRANSLATE, X: 0, Y: 0, Z: 0})
+	queue = append(queue, Operation{op: ROTATE, X: 0, Y: 0, Z: 90})
+	queue = append(queue, Operation{op: SCALE, X: 2.0, Y: 2.0, Z: 2.0})
+	queue = append(queue, Operation{op: TRANSLATE, X: -3, Y: 0, Z: 0})
+	queue = append(queue, Operation{op: ROTATE, X: 0, Y: 360, Z: 0})
+	queue = append(queue, Operation{op: SCALE, X: 0.5, Y: 0.5, Z: 0.5})
+	queue = append(queue, Operation{op: TRANSLATE, X: 3, Y: 0, Z: 0})
 
-	// TODO: Add a callback timer to schedule the transformations on the objects (split into n pieces each, so they animates)
-	//       This is the thing which should process the operations queue
+	// Animate the transformation operations
 	for _, i := range queue {
+		parts := 60                      // Number of parts to break each transformation into
+		transformMatrix = identityMatrix // Reset the transform matrix
 		switch i.op {
-		case ROTATE:
-			// Rotate the objects in world space
-			fmt.Printf("Rotation amount; X: %v, Y: %v, Z: %v\n", i.X, i.Y, i.Z)
+		case ROTATE: // Rotate the objects in world space
+			// Divide the desired angle into a small number of parts
 			if i.X != 0 {
-				transformMatrix = rotateAroundX(transformMatrix, i.X)
+				transformMatrix = rotateAroundX(transformMatrix, i.X/float64(parts))
 			}
 			if i.Y != 0 {
-				transformMatrix = rotateAroundY(transformMatrix, i.Y)
+				transformMatrix = rotateAroundY(transformMatrix, i.Y/float64(parts))
 			}
 			if i.Z != 0 {
-				transformMatrix = rotateAroundZ(transformMatrix, i.Z)
+				transformMatrix = rotateAroundZ(transformMatrix, i.Z/float64(parts))
 			}
+			opText = fmt.Sprintf("Rotation. X: %0.2f Y: %0.2f Z: %0.2f", i.X, i.Y, i.Z)
+
 		case SCALE:
 			// Scale the objects in world space
-			fmt.Printf("Scale amount; X: %v, Y: %v, Z: %v\n", i.X, i.Y, i.Z)
-			transformMatrix = scale(transformMatrix, i.X, i.Y, i.Z)
+			var xPart, yPart, zPart float64
+			if i.X != 1 {
+				xPart = ((i.X - 1) / float64(parts)) + 1
+			}
+			if i.Y != 1 {
+				yPart = ((i.Y - 1) / float64(parts)) + 1
+			}
+			if i.Z != 1 {
+				zPart = ((i.Z - 1) / float64(parts)) + 1
+			}
+			transformMatrix = scale(transformMatrix, xPart, yPart, zPart)
+			opText = fmt.Sprintf("Scale. X: %0.2f Y: %0.2f Z: %0.2f", i.X, i.Y, i.Z)
+
 		case TRANSLATE:
 			// Translate (move) the objects in world space
-			fmt.Printf("Translate amount; X: %v, Y: %v, Z: %v\n", i.X, i.Y, i.Z)
-			transformMatrix = translate(transformMatrix, i.X, i.Y, i.Z)
+			transformMatrix = translate(transformMatrix, i.X/float64(parts), i.Y/float64(parts), i.Z/float64(parts))
+			opText = fmt.Sprintf("Translate (move). X: %0.2f Y: %0.2f Z: %0.2f", i.X, i.Y, i.Z)
 		}
 
-		// Apply the transformation matrix to the points in the world space
-		for j, o := range worldSpace {
-			var newPoints []Point
-			for _, j := range o.P {
-				newPoints = append(newPoints, transform(transformMatrix, j))
+		// Apply each transformation, one small part at a time (this gives the animation effect)
+		for t := 0; t < parts; t++ {
+			time.Sleep(time.Millisecond * time.Duration(1000/parts))
+			for j, o := range worldSpace {
+				var newPoints []Point
+				for _, j := range o.P {
+					newPoints = append(newPoints, transform(transformMatrix, j))
+				}
+				o.P = newPoints
+				worldSpace[j] = o
 			}
-			o.P = newPoints
-			worldSpace[j] = o
 		}
 	}
+	opText = "Complete"
 
 	// Keep the application running
 	done := make(chan struct{}, 0)
@@ -391,6 +416,12 @@ func renderFrame(args []js.Value) {
 				ctx.Call("stroke")
 			}
 		}
+
+		// Draw the text describing the current operation
+		ctx.Set("font", "bold 14px serif")
+		ctx.Call("fillText", "Operation:", graphWidth+20, graphHeight-40) // TODO: Figure out better Y placement
+		ctx.Set("font", "14px sans-serif")
+		ctx.Call("fillText", opText, graphWidth+20, graphHeight-20) // TODO: Figure out better Y placement
 
 		// It seems kind of weird (to me) to recursively call itself here, instead of using a timer approach, but
 		// apparently this is best practise, at least in web environments: https://css-tricks.com/using-requestanimationframe
