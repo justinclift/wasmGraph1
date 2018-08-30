@@ -179,7 +179,42 @@ func renderFrame(args []js.Value) {
 		ctx.Call("closePath")
 		ctx.Call("stroke")
 
+		// Draw grid lines
+		step := math.Min(width, height) / 30
+		ctx.Set("strokeStyle", "rgb(220, 220, 220)")
+		ctx.Call("setLineDash", []interface{}{1, 3})
+		for i := graphWidth / 2; i < graphWidth-step; i += step {
+			// Vertical dashed lines, right half
+			ctx.Call("beginPath")
+			ctx.Call("moveTo", i+step, top)
+			ctx.Call("lineTo", i+step, graphHeight)
+			ctx.Call("stroke")
+		}
+		for i := graphWidth / 2; i > left; i -= step {
+			// Vertical dashed lines, left half
+			ctx.Call("beginPath")
+			ctx.Call("moveTo", i+step, top)
+			ctx.Call("lineTo", i+step, graphHeight)
+			ctx.Call("stroke")
+		}
+		for i := graphHeight / 2; i > top; i -= step {
+			// Horizontal dashed lines, top half
+			ctx.Call("beginPath")
+			ctx.Call("moveTo", left, i+step)
+			ctx.Call("lineTo", graphWidth-border, i+step)
+			ctx.Call("stroke")
+		}
+		for i := graphHeight / 2; i < graphHeight-step; i += step {
+			// Horizontal dashed lines, bottom half
+			ctx.Call("beginPath")
+			ctx.Call("moveTo", left, i+step)
+			ctx.Call("lineTo", graphWidth-border, i+step)
+			ctx.Call("stroke")
+		}
+
 		// Draw horizontal axis
+		ctx.Set("strokeStyle", "black")
+		ctx.Call("setLineDash", []interface{}{})
 		ctx.Call("beginPath")
 		ctx.Call("moveTo", left, centerY)
 		ctx.Call("lineTo", graphWidth-gap, centerY)
@@ -191,76 +226,32 @@ func renderFrame(args []js.Value) {
 		ctx.Call("lineTo", centerX, graphHeight-gap)
 		ctx.Call("stroke")
 
-		// Draw grid lines and horizontal markers
-		step := math.Min(width, height) / 30
+		// Draw axis markers
 		markerPoint := graphHeight/2 - 5
-		gridColour := "rgb(220, 220, 220)"
-		gridSpacing := []interface{}{1, 3}
-		for i := graphWidth / 2; i < graphWidth-step; i += step {
-			// X axis dashed lines, right side
-			ctx.Set("strokeStyle", gridColour)
-			ctx.Call("setLineDash", gridSpacing)
-			ctx.Call("beginPath")
-			ctx.Call("moveTo", i+step, top)
-			ctx.Call("lineTo", i+step, graphHeight)
-			ctx.Call("stroke")
-
+		for i := graphWidth / 2; i < graphWidth-step-border; i += step {
 			// Right X axis markers
-			ctx.Set("strokeStyle", "black")
-			ctx.Call("setLineDash", []interface{}{})
 			ctx.Call("beginPath")
 			ctx.Call("moveTo", i+step, markerPoint)
 			ctx.Call("lineTo", i+step, markerPoint+10)
 			ctx.Call("stroke")
 		}
-		for i := graphWidth / 2; i > left; i -= step {
-			// X axis dashed lines, left side
-			ctx.Set("strokeStyle", gridColour)
-			ctx.Call("setLineDash", gridSpacing)
-			ctx.Call("beginPath")
-			ctx.Call("moveTo", i+step, top)
-			ctx.Call("lineTo", i+step, graphHeight)
-			ctx.Call("stroke")
-
+		for i := graphWidth / 2; i > left+step+border; i -= step {
 			// Left X axis markers
-			ctx.Set("strokeStyle", "black")
-			ctx.Call("setLineDash", []interface{}{})
 			ctx.Call("beginPath")
 			ctx.Call("moveTo", i-step, markerPoint)
 			ctx.Call("lineTo", i-step, markerPoint+10)
 			ctx.Call("stroke")
 		}
-
 		markerPoint = graphWidth/2 - 5
-		for i := graphHeight / 2; i > top; i -= step {
-			// X axis dashed lines, top
-			ctx.Set("strokeStyle", gridColour)
-			ctx.Call("setLineDash", gridSpacing)
-			ctx.Call("beginPath")
-			ctx.Call("moveTo", left, i+step)
-			ctx.Call("lineTo", graphWidth, i+step)
-			ctx.Call("stroke")
-
+		for i := graphHeight / 2; i > top+step; i -= step {
 			// Upper Y axis markers
-			ctx.Set("strokeStyle", "black")
-			ctx.Call("setLineDash", []interface{}{})
 			ctx.Call("beginPath")
 			ctx.Call("moveTo", markerPoint, i-step)
 			ctx.Call("lineTo", markerPoint+10, i-step)
 			ctx.Call("stroke")
 		}
 		for i := graphHeight / 2; i < graphHeight-step; i += step {
-			// X axis dashed lines, bottom
-			ctx.Set("strokeStyle", gridColour)
-			ctx.Call("setLineDash", gridSpacing)
-			ctx.Call("beginPath")
-			ctx.Call("moveTo", left, i+step)
-			ctx.Call("lineTo", graphWidth, i+step)
-			ctx.Call("stroke")
-
 			// Lower Y axis markers
-			ctx.Set("strokeStyle", "black")
-			ctx.Call("setLineDash", []interface{}{})
 			ctx.Call("beginPath")
 			ctx.Call("moveTo", markerPoint, i+step)
 			ctx.Call("lineTo", markerPoint+10, i+step)
