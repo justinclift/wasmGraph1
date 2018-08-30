@@ -142,7 +142,7 @@ func main() {
 	defer rCall.Release()
 
 	// Set the operations processor going
-	queue = make(chan Operation, 3)
+	queue = make(chan Operation, 10)
 	go processOperations(queue)
 
 	// TODO: Look into clip regions, so things outside the graph area aren't drawn
@@ -232,7 +232,6 @@ func keypressHander(args []js.Value) {
 	if debug {
 		fmt.Printf("Key is: %v\n", key)
 	}
-	// TODO: Use key presses to rotate the view around the world space origin
 	switch key {
 	case "ArrowLeft", "a", "A", "4":
 		queue <- Operation{op: ROTATE, X: 0, Y: -30, Z: 0}
@@ -242,18 +241,14 @@ func keypressHander(args []js.Value) {
 		queue <- Operation{op: ROTATE, X: -30, Y: 0, Z: 0}
 	case "ArrowDown", "s", "S", "2":
 		queue <- Operation{op: ROTATE, X: 30, Y: 0, Z: 0}
-		//case "7", "Home":
-		//	rectX -= step
-		//	rectY -= step
-		//case "9", "PageUp":
-		//	rectX += step
-		//	rectY -= step
-		//case "1", "End":
-		//	rectX -= step
-		//	rectY += step
-		//case "3", "PageDown":
-		//	rectX += step
-		//	rectY += step
+	case "7", "Home":
+		queue <- Operation{op: ROTATE, X: -30, Y: -30, Z: 0}
+	case "9", "PageUp":
+		queue <- Operation{op: ROTATE, X: -30, Y: 30, Z: 0}
+	case "1", "End":
+		queue <- Operation{op: ROTATE, X: 30, Y: -30, Z: 0}
+	case "3", "PageDown":
+		queue <- Operation{op: ROTATE, X: 30, Y: 30, Z: 0}
 	}
 }
 
