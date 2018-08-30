@@ -30,7 +30,7 @@ const (
 )
 
 type Operation struct {
-	op   Operation
+	op   OperationType
 	data []interface{}
 }
 
@@ -59,7 +59,7 @@ var (
 		{X: 0, Y: -3, Z: 2.5},
 	}
 
-	// FIFO queue, to store operations in order
+	// Super simple FIFO queue, to store operations
 	queue []Operation
 
 	width, height      float64
@@ -155,8 +155,8 @@ func renderFrame(args []js.Value) {
 
 		// ** Draw the graph area **
 
-		// Grey background
-		ctx.Set("fillStyle", "lightgrey")
+		// Background
+		ctx.Set("fillStyle", "white")
 		ctx.Call("fillRect", 1, 1, width-1, height-1)
 
 		// Draw border around the graph area
@@ -168,9 +168,10 @@ func renderFrame(args []js.Value) {
 		graphHeight := height - 1
 		centerX := graphWidth / 2
 		centerY := graphHeight / 2
-		ctx.Call("beginPath")
-		ctx.Set("strokeStyle", "black")
 		ctx.Set("lineWidth", "2")
+		ctx.Set("strokeStyle", "black")
+		ctx.Call("setLineDash", []interface{}{})
+		ctx.Call("beginPath")
 		ctx.Call("moveTo", border, border)
 		ctx.Call("lineTo", graphWidth, border)
 		ctx.Call("lineTo", graphWidth, graphHeight)
@@ -180,16 +181,12 @@ func renderFrame(args []js.Value) {
 
 		// Draw horizontal axis
 		ctx.Call("beginPath")
-		ctx.Set("strokeStyle", "black")
-		ctx.Set("lineWidth", "2")
 		ctx.Call("moveTo", left, centerY)
 		ctx.Call("lineTo", graphWidth-gap, centerY)
 		ctx.Call("stroke")
 
 		// Draw vertical axis
 		ctx.Call("beginPath")
-		ctx.Set("strokeStyle", "black")
-		ctx.Set("lineWidth", "2")
 		ctx.Call("moveTo", centerX, top)
 		ctx.Call("lineTo", centerX, graphHeight-gap)
 		ctx.Call("stroke")
@@ -199,16 +196,12 @@ func renderFrame(args []js.Value) {
 		markerPoint := graphHeight/2 - 5
 		for i := graphWidth / 2; i < graphWidth-step; i += step {
 			ctx.Call("beginPath")
-			ctx.Set("strokeStyle", "black")
-			ctx.Set("lineWidth", "1")
 			ctx.Call("moveTo", i+step, markerPoint)
 			ctx.Call("lineTo", i+step, markerPoint+10)
 			ctx.Call("stroke")
 		}
 		for i := graphWidth / 2; i > left; i -= step {
 			ctx.Call("beginPath")
-			ctx.Set("strokeStyle", "black")
-			ctx.Set("lineWidth", "1")
 			ctx.Call("moveTo", i-step, markerPoint)
 			ctx.Call("lineTo", i-step, markerPoint+10)
 			ctx.Call("stroke")
@@ -218,16 +211,12 @@ func renderFrame(args []js.Value) {
 		markerPoint = graphWidth/2 - 5
 		for i := graphHeight / 2; i < graphHeight-step; i += step {
 			ctx.Call("beginPath")
-			ctx.Set("strokeStyle", "black")
-			ctx.Set("lineWidth", "1")
 			ctx.Call("moveTo", markerPoint, i+step)
 			ctx.Call("lineTo", markerPoint+10, i+step)
 			ctx.Call("stroke")
 		}
 		for i := graphHeight / 2; i > top; i -= step {
 			ctx.Call("beginPath")
-			ctx.Set("strokeStyle", "black")
-			ctx.Set("lineWidth", "1")
 			ctx.Call("moveTo", markerPoint, i-step)
 			ctx.Call("lineTo", markerPoint+10, i-step)
 			ctx.Call("stroke")
@@ -252,17 +241,18 @@ func renderFrame(args []js.Value) {
 				ctx.Call("fillText", fmt.Sprintf("Point %d", l.Num), px+5, py+15)
 
 				// Draw lines between the points
+				ctx.Set("strokeStyle", "black")
+				ctx.Set("lineWidth", "1")
+				ctx.Call("setLineDash", []interface{}{2, 4})
 				var tx, ty float64
 				if k == 0 {
 					if len(o) >= 4 {
 						// TODO: This is just a dodgy workaround while testing.  Would be good to figure out a better approach.
-						//       Maybe instead of using just Points, use some kind of structure that also defines edges?  Or would
-						//       code to automatically work out the edges between points be better instead?
+						//       Maybe instead of using just Points, use a structure that also defines edges? .obj files
+						//       take this approach
 						tx = centerX + (o[len(o)-2].X * step)
 						ty = centerY + ((o[len(o)-2].Y * step) * -1)
 						ctx.Call("beginPath")
-						ctx.Set("strokeStyle", "black")
-						ctx.Set("lineWidth", "1")
 						ctx.Call("moveTo", px, py)
 						ctx.Call("lineTo", tx, ty)
 						ctx.Call("stroke")
@@ -272,8 +262,6 @@ func renderFrame(args []js.Value) {
 						tx = centerX + (o[len(o)-1].X * step)
 						ty = centerY + ((o[len(o)-1].Y * step) * -1)
 						ctx.Call("beginPath")
-						ctx.Set("strokeStyle", "black")
-						ctx.Set("lineWidth", "1")
 						ctx.Call("moveTo", px, py)
 						ctx.Call("lineTo", tx, ty)
 						ctx.Call("stroke")
@@ -284,8 +272,6 @@ func renderFrame(args []js.Value) {
 						tx = centerX + (o[len(o)-1].X * step)
 						ty = centerY + ((o[len(o)-1].Y * step) * -1)
 						ctx.Call("beginPath")
-						ctx.Set("strokeStyle", "black")
-						ctx.Set("lineWidth", "1")
 						ctx.Call("moveTo", px, py)
 						ctx.Call("lineTo", tx, ty)
 						ctx.Call("stroke")
@@ -297,20 +283,11 @@ func renderFrame(args []js.Value) {
 					ty = centerY + ((o[k-1].Y * step) * -1)
 				}
 				ctx.Call("beginPath")
-				ctx.Set("strokeStyle", "black")
-				ctx.Set("lineWidth", "1")
-				// setLineDash doesn't seem to work.  TODO: Figure out the right way to call this, as ctx.Call() outright fails
-				// https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/setLineDash
-				//ctx.Set("setLineDash", "{5, 15}")
-				//ctx.Set("setLineDash", "5, 15")
-				//ctx.Set("setLineDash", "[5, 15]")
-				//ctx.Set("setLineDash", "\"[5, 15]\"")
 				ctx.Call("moveTo", px, py)
 				ctx.Call("lineTo", tx, ty)
 				ctx.Call("stroke")
 
 				// Draw darker coloured legend text
-				ctx.Set("fillStyle", "black")
 				ctx.Set("font", "bold 14px serif")
 				ctx.Call("fillText", fmt.Sprintf("Point %d:", l.Num), graphWidth+20, l.Num*25)
 
