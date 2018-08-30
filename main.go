@@ -326,55 +326,9 @@ func renderFrame(args []js.Value) {
 			ctx.Call("stroke")
 		}
 
-		// Draw horizontal axis
+		// Draw the points
 		ctx.Set("strokeStyle", "black")
 		ctx.Call("setLineDash", []interface{}{})
-		ctx.Call("beginPath")
-		ctx.Call("moveTo", left, centerY)
-		ctx.Call("lineTo", graphWidth-gap, centerY)
-		ctx.Call("stroke")
-
-		// Draw vertical axis
-		ctx.Call("beginPath")
-		ctx.Call("moveTo", centerX, top)
-		ctx.Call("lineTo", centerX, graphHeight-gap)
-		ctx.Call("stroke")
-
-		// Draw axis markers
-		markerPoint := graphHeight/2 - 5
-		for i := graphWidth / 2; i < graphWidth-step-border; i += step {
-			// Right X axis markers
-			ctx.Call("beginPath")
-			ctx.Call("moveTo", i+step, markerPoint)
-			ctx.Call("lineTo", i+step, markerPoint+10)
-			ctx.Call("stroke")
-		}
-		for i := graphWidth / 2; i > left+step+border; i -= step {
-			// Left X axis markers
-			ctx.Call("beginPath")
-			ctx.Call("moveTo", i-step, markerPoint)
-			ctx.Call("lineTo", i-step, markerPoint+10)
-			ctx.Call("stroke")
-		}
-		markerPoint = graphWidth/2 - 5
-		for i := graphHeight / 2; i > top+step; i -= step {
-			// Upper Y axis markers
-			ctx.Call("beginPath")
-			ctx.Call("moveTo", markerPoint, i-step)
-			ctx.Call("lineTo", markerPoint+10, i-step)
-			ctx.Call("stroke")
-		}
-		for i := graphHeight / 2; i < graphHeight-step; i += step {
-			// Lower Y axis markers
-			ctx.Call("beginPath")
-			ctx.Call("moveTo", markerPoint, i+step)
-			ctx.Call("lineTo", markerPoint+10, i+step)
-			ctx.Call("stroke")
-		}
-
-		// TODO: Maybe add axis label text every few points?
-
-		// Draw the points
 		var pointNum int
 		var px, py float64
 		for _, o := range worldSpace {
