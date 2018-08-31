@@ -185,12 +185,12 @@ func main() {
 	worldSpace["ob3"] = importObject(object3, -3.0, 0.0, -1.0)
 
 	// Add some transformation operations to the queue
-	//queue <- Operation{op: ROTATE, t: 1000, f: 60, X: 0, Y: 0, Z: 90}
+	queue <- Operation{op: ROTATE, t: 1000, f: 60, X: 0, Y: 0, Z: 90}
 	queue <- Operation{op: SCALE, t: 1000, f: 60, X: 2.0, Y: 2.0, Z: 2.0}
-	//queue <- Operation{op: TRANSLATE, t: 1000, f: 60, X: -3, Y: 0, Z: 0}
-	//queue <- Operation{op: ROTATE, t: 1000, f: 60, X: 0, Y: 360, Z: 0}
-	//queue <- Operation{op: SCALE, t: 1000, f: 60, X: 0.5, Y: 0.5, Z: 0.5}
-	//queue <- Operation{op: TRANSLATE, t: 1000, f: 60, X: 3, Y: 0, Z: 0}
+	queue <- Operation{op: ROTATE, t: 1000, f: 60, X: 0, Y: 360, Z: 0}
+	queue <- Operation{op: SCALE, t: 1000, f: 60, X: 0.5, Y: 0.5, Z: 0.5}
+	queue <- Operation{op: ROTATE, t: 1000, f: 60, X: 45, Y: 0, Z: -240}
+	queue <- Operation{op: SCALE, t: 1000, f: 60, X: 1.5, Y: 1.5, Z: 1.52}
 
 	// Keep the application running
 	done := make(chan struct{}, 0)
