@@ -394,29 +394,15 @@ func renderFrame(args []js.Value) {
 		step := math.Min(width, height) / 30
 		ctx.Set("strokeStyle", "rgb(220, 220, 220)")
 		ctx.Call("setLineDash", []interface{}{1, 3})
-		for i := graphWidth / 2; i < graphWidth-step; i += step {
-			// Vertical dashed lines, right half
+		for i := left; i < graphWidth-step; i += step {
+			// Vertical dashed lines
 			ctx.Call("beginPath")
 			ctx.Call("moveTo", i+step, top)
 			ctx.Call("lineTo", i+step, graphHeight)
 			ctx.Call("stroke")
 		}
-		for i := graphWidth / 2; i > left; i -= step {
-			// Vertical dashed lines, left half
-			ctx.Call("beginPath")
-			ctx.Call("moveTo", i+step, top)
-			ctx.Call("lineTo", i+step, graphHeight)
-			ctx.Call("stroke")
-		}
-		for i := graphHeight / 2; i > top; i -= step {
-			// Horizontal dashed lines, top half
-			ctx.Call("beginPath")
-			ctx.Call("moveTo", left, i+step)
-			ctx.Call("lineTo", graphWidth-border, i+step)
-			ctx.Call("stroke")
-		}
-		for i := graphHeight / 2; i < graphHeight-step; i += step {
-			// Horizontal dashed lines, bottom half
+		for i := top; i < graphHeight-step; i += step {
+			// Horizontal dashed lines
 			ctx.Call("beginPath")
 			ctx.Call("moveTo", left, i+step)
 			ctx.Call("lineTo", graphWidth-border, i+step)
