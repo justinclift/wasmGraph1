@@ -22,6 +22,7 @@ type Edge []int
 type Surface []int
 
 type Object struct {
+	C string // Colour of the object
 	P []Point
 	E []Edge    // List of points to connect by edges
 	S []Surface // List of points to connect in order, to create a surface
@@ -51,6 +52,7 @@ var (
 
 	// The point objects
 	object1 = Object{
+		C: "lightblue",
 		P: []Point{
 			{X: 0, Y: 1.75, Z: 1.0},    // Point 0 for this object
 			{X: 1.5, Y: -1.75, Z: 1.0}, // Point 1 for this object
@@ -73,6 +75,7 @@ var (
 		},
 	}
 	object2 = Object{
+		C: "lightgreen",
 		P: []Point{
 			{X: 1.5, Y: 1.5, Z: -1.0},  // Point 0 for this object
 			{X: 1.5, Y: -1.5, Z: -1.0}, // Point 1 for this object
@@ -88,6 +91,7 @@ var (
 		},
 	}
 	object3 = Object{
+		C: "indianred",
 		P: []Point{
 			{X: 2, Y: -2, Z: 1.0},
 			{X: 2, Y: -4, Z: 1.0},
@@ -328,9 +332,9 @@ func renderFrame(args []js.Value) {
 		}
 
 		// Draw the surfaces
-		ctx.Set("fillStyle", "darkgrey")
 		var pointX, pointY float64
 		for _, o := range worldSpace {
+			ctx.Set("fillStyle", o.C)
 			for _, l := range o.S {
 				for m, n := range l {
 					pointX = o.P[n].X
@@ -458,12 +462,11 @@ func importObject(ob Object, x float64, y float64, z float64) (translatedObject 
 		pointCounter++
 	}
 
-	// Copy the edge definitions across
+	// Copy the colour, edge, and surface definitions across
+	translatedObject.C = ob.C
 	for _, j := range ob.E {
 		translatedObject.E = append(translatedObject.E, j)
 	}
-
-	// Copy the surface definitions across
 	for _, j := range ob.S {
 		translatedObject.S = append(translatedObject.S, j)
 	}
