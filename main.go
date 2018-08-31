@@ -171,9 +171,9 @@ func main() {
 	worldSpace["ob3"] = importObject(object3, -3.0, 0.0, -1.0)
 
 	// Add some transformation operations to the queue
-	queue <- Operation{op: ROTATE, t: 1000, f: 60, X: 0, Y: 0, Z: 90}
+	//queue <- Operation{op: ROTATE, t: 1000, f: 60, X: 0, Y: 0, Z: 90}
 	queue <- Operation{op: SCALE, t: 1000, f: 60, X: 2.0, Y: 2.0, Z: 2.0}
-	queue <- Operation{op: TRANSLATE, t: 1000, f: 60, X: -3, Y: 0, Z: 0}
+	//queue <- Operation{op: TRANSLATE, t: 1000, f: 60, X: -3, Y: 0, Z: 0}
 	//queue <- Operation{op: ROTATE, t: 1000, f: 60, X: 0, Y: 360, Z: 0}
 	//queue <- Operation{op: SCALE, t: 1000, f: 60, X: 0.5, Y: 0.5, Z: 0.5}
 	//queue <- Operation{op: TRANSLATE, t: 1000, f: 60, X: 3, Y: 0, Z: 0}
@@ -280,13 +280,7 @@ func renderFrame(args []js.Value) {
 			canvasEl.Set("height", height)
 		}
 
-		// ** Draw the graph area **
-
-		// Background
-		ctx.Set("fillStyle", "white")
-		ctx.Call("fillRect", 1, 1, width-1, height-1)
-
-		// Draw border around the graph area
+		// Setup useful variables
 		border := float64(2)
 		gap := float64(3)
 		left := border + gap
@@ -295,16 +289,10 @@ func renderFrame(args []js.Value) {
 		graphHeight := height - 1
 		centerX := graphWidth / 2
 		centerY := graphHeight / 2
-		ctx.Set("lineWidth", "2")
-		ctx.Set("strokeStyle", "black")
-		ctx.Call("setLineDash", []interface{}{})
-		ctx.Call("beginPath")
-		ctx.Call("moveTo", border, border)
-		ctx.Call("lineTo", graphWidth, border)
-		ctx.Call("lineTo", graphWidth, graphHeight)
-		ctx.Call("lineTo", border, graphHeight)
-		ctx.Call("closePath")
-		ctx.Call("stroke")
+
+		// Clear the background
+		ctx.Set("fillStyle", "white")
+		ctx.Call("fillRect", 0, 0, width, height)
 
 		// Draw grid lines
 		step := math.Min(width, height) / 30
@@ -339,37 +327,29 @@ func renderFrame(args []js.Value) {
 			ctx.Call("stroke")
 		}
 
-		// Draw the points
-		ctx.Set("strokeStyle", "black")
-		ctx.Set("fillStyle", "black")
-		ctx.Call("setLineDash", []interface{}{})
-		var pointNum int
-		var px, py float64
+		// Draw the surfaces
+		ctx.Set("fillStyle", "darkgrey")
+		var pointX, pointY float64
 		for _, o := range worldSpace {
-			for _, l := range o.P {
-				// Draw the coloured dot for the point
-				px = centerX + (l.X * step)
-				py = centerY + ((l.Y * step) * -1)
-				ctx.Call("beginPath")
-				ctx.Call("arc", px, py, 1, 0, 2*math.Pi)
+			for _, l := range o.S {
+				for m, n := range l {
+					pointX = o.P[n].X
+					pointY = o.P[n].Y
+					if m == 0 {
+						ctx.Call("beginPath")
+						ctx.Call("moveTo", centerX+(pointX*step), centerY+((pointY*step)*-1))
+					} else {
+						ctx.Call("lineTo", centerX+(pointX*step), centerY+((pointY*step)*-1))
+					}
+				}
+				ctx.Call("closePath")
 				ctx.Call("fill")
-
-				// Label the point on the graph
-				ctx.Set("font", "12px sans-serif")
-				ctx.Call("fillText", fmt.Sprintf("Point %d", l.Num), px+5, py+15)
-
-				// Draw darker coloured legend text
-				ctx.Set("font", "bold 14px serif")
-				ctx.Call("fillText", fmt.Sprintf("Point %d:", l.Num), graphWidth+20, l.Num*25)
-
-				// Draw lighter coloured legend text
-				ctx.Set("font", "12px sans-serif")
-				ctx.Call("fillText", fmt.Sprintf("(%0.1f, %0.1f, %0.1f)", l.X, l.Y, l.Z), graphWidth+100, l.Num*25)
-				pointNum++
 			}
 		}
 
 		// Draw the edges
+		ctx.Set("strokeStyle", "black")
+		ctx.Set("fillStyle", "black")
 		ctx.Set("lineWidth", "1")
 		ctx.Call("setLineDash", []interface{}{2, 4})
 		var point1X, point1Y, point2X, point2Y float64
@@ -385,6 +365,65 @@ func renderFrame(args []js.Value) {
 				ctx.Call("stroke")
 			}
 		}
+
+		// Draw the points on the graph
+		ctx.Call("setLineDash", []interface{}{})
+		var pointNum int
+		var px, py float64
+		for _, o := range worldSpace {
+			for _, l := range o.P {
+				// Draw a dot for the point
+				px = centerX + (l.X * step)
+				py = centerY + ((l.Y * step) * -1)
+				ctx.Call("beginPath")
+				ctx.Call("arc", px, py, 1, 0, 2*math.Pi)
+				ctx.Call("fill")
+
+				// Label the point on the graph
+				ctx.Set("font", "12px sans-serif")
+				ctx.Call("fillText", fmt.Sprintf("Point %d", l.Num), px+5, py+15)
+			}
+		}
+
+		// Clear the information area (right side)
+		ctx.Set("fillStyle", "white")
+		ctx.Call("fillRect", graphWidth+1, 0, width, height)
+
+		// Draw the information area (right side) text
+		ctx.Set("fillStyle", "black")
+		for _, o := range worldSpace {
+			for _, l := range o.P {
+				// Draw darker coloured legend text
+				ctx.Set("font", "bold 14px serif")
+				ctx.Call("fillText", fmt.Sprintf("Point %d:", l.Num), graphWidth+20, l.Num*25)
+
+				// Draw lighter coloured legend text
+				ctx.Set("font", "12px sans-serif")
+				ctx.Call("fillText", fmt.Sprintf("(%0.1f, %0.1f, %0.1f)", l.X, l.Y, l.Z), graphWidth+100, l.Num*25)
+				pointNum++
+			}
+		}
+
+		// Draw a border around the graph area
+		ctx.Call("setLineDash", []interface{}{})
+		ctx.Set("lineWidth", "1")
+		ctx.Set("strokeStyle", "white")
+		ctx.Call("beginPath")
+		ctx.Call("moveTo", 0, 0)
+		ctx.Call("lineTo", width, 0)
+		ctx.Call("lineTo", width, height)
+		ctx.Call("lineTo", 0, height)
+		ctx.Call("closePath")
+		ctx.Call("stroke")
+		ctx.Set("lineWidth", "2")
+		ctx.Set("strokeStyle", "black")
+		ctx.Call("beginPath")
+		ctx.Call("moveTo", border, border)
+		ctx.Call("lineTo", graphWidth, border)
+		ctx.Call("lineTo", graphWidth, graphHeight)
+		ctx.Call("lineTo", border, graphHeight)
+		ctx.Call("closePath")
+		ctx.Call("stroke")
 
 		// Draw the text describing the current operation
 		ctx.Set("font", "bold 14px serif")
@@ -423,6 +462,11 @@ func importObject(ob Object, x float64, y float64, z float64) (translatedObject 
 	// Copy the edge definitions across
 	for _, j := range ob.E {
 		translatedObject.E = append(translatedObject.E, j)
+	}
+
+	// Copy the surface definitions across
+	for _, j := range ob.S {
+		translatedObject.S = append(translatedObject.S, j)
 	}
 
 	return translatedObject

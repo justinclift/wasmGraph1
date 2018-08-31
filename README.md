@@ -1,5 +1,7 @@
 A simple experiment with Go Wasm on the HTML5 Canvas (2D).
 
+Online demo: https://justinclift.github.io/wasmGraph1/
+
 This renders several basic objects from 3D space onto the 2D canvas, performing
 various rotation, scale, and transform operations on them (via matrix transforms).
 
