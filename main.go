@@ -24,10 +24,11 @@ type Edge []int
 type Surface []int
 
 type Object struct {
-	C string // Colour of the object
-	P []Point
-	E []Edge    // List of points to connect by edges
-	S []Surface // List of points to connect in order, to create a surface
+	C   string // Colour of the object
+	P   []Point
+	E   []Edge    // List of points to connect by edges
+	S   []Surface // List of points to connect in order, to create a surface
+	Mid Point     // The mid point of the object.  Used for calculating object draw order in a very simple way
 }
 
 type OperationType int
@@ -45,6 +46,11 @@ type Operation struct {
 	X  float64
 	Y  float64
 	Z  float64
+}
+
+type paintOrder struct {
+	midZ float64 // Z depth of an object's mid point
+	name string
 }
 
 var (
@@ -155,7 +161,7 @@ func main() {
 
 	// Set up the keypress handler
 	renderActive = atomic.NewBool(false)
-	kCall = js.NewCallback(keypressHander)
+	kCall = js.NewCallback(keypressHandler)
 	doc.Call("addEventListener", "keydown", kCall)
 	defer kCall.Release()
 
@@ -203,15 +209,27 @@ func importObject(ob Object, x float64, y float64, z float64) (translatedObject 
 	}
 
 	// Translate the points
+	var midX, midY, midZ float64
+	var pt Point
 	for _, j := range ob.P {
-		translatedObject.P = append(translatedObject.P, Point{
+		pt = Point{
 			Num: pointCounter,
 			X:   (translateMatrix[0] * j.X) + (translateMatrix[1] * j.Y) + (translateMatrix[2] * j.Z) + (translateMatrix[3] * 1),   // 1st col, top
 			Y:   (translateMatrix[4] * j.X) + (translateMatrix[5] * j.Y) + (translateMatrix[6] * j.Z) + (translateMatrix[7] * 1),   // 1st col, upper middle
 			Z:   (translateMatrix[8] * j.X) + (translateMatrix[9] * j.Y) + (translateMatrix[10] * j.Z) + (translateMatrix[11] * 1), // 1st col, lower middle
-		})
+		}
+		translatedObject.P = append(translatedObject.P, pt)
+		midX = pt.X
+		midY = pt.Y
+		midZ = pt.Z
 		pointCounter++
 	}
+
+	// Determine the mid point for the object
+	numPts := float64(len(ob.P))
+	translatedObject.Mid.X = midX / numPts
+	translatedObject.Mid.Y = midY / numPts
+	translatedObject.Mid.Z = midZ / numPts
 
 	// Copy the colour, edge, and surface definitions across
 	translatedObject.C = ob.C
@@ -227,7 +245,8 @@ func importObject(ob Object, x float64, y float64, z float64) (translatedObject 
 
 // Simple keyboard handler for catching the arrow, WASD, and numpad keys
 // Key value info can be found here: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
-func keypressHander(args []js.Value) {
+// TODO: See if it's feasible to catch mouse wheel events.  If so, add scale operations for enabling zoom in/out
+func keypressHandler(args []js.Value) {
 	event := args[0]
 	key := event.Get("key").String()
 	if debug {
@@ -352,10 +371,18 @@ func processOperations(queue <-chan Operation) {
 			time.Sleep(timeSlice)
 			for j, o := range worldSpace {
 				var newPoints []Point
+
+				// Transform each point of in the object
 				for _, j := range o.P {
 					newPoints = append(newPoints, transform(transformMatrix, j))
 				}
 				o.P = newPoints
+
+				// Transform the mid point of the object.  In theory, this should mean the mid point can always be used
+				// for a simple (not-cpu-intensive) way to sort the objects in Z depth order
+				o.Mid = transform(transformMatrix, o.Mid)
+
+				// Update the object in world space
 				worldSpace[j] = o
 			}
 		}
@@ -409,11 +436,32 @@ func renderFrame(args []js.Value) {
 			ctx.Call("stroke")
 		}
 
-		// Draw the surfaces
-		// TODO: This should probably sort the objects by distance from the camera, so the drawing operations
-		//       of further away objects don't overwrite closer ones
+		// Sort the objects by mid point Z depth order
+		order := make(map[int]paintOrder, len(worldSpace))
+		var tmpOrder paintOrder
+		for i, j := range worldSpace {
+			if len(order) == 0 {
+				// Add the first order item
+				order[0] = paintOrder{name: i, midZ: j.Mid.Z}
+			} else {
+				tmpOrder = paintOrder{name: i, midZ: j.Mid.Z}
+				for k := 0; k < len(order); k++ {
+					if order[k].midZ > tmpOrder.midZ {
+						// Swap the items
+						a := paintOrder{name: order[k].name, midZ: order[k].midZ}
+						order[k] = tmpOrder
+						tmpOrder = a
+					}
+				}
+				order[len(order)] = tmpOrder // Add the new item (should be the largest Z value so far) to the end
+			}
+		}
+
+		// Draw the surfaces, in Z depth order
 		var pointX, pointY float64
-		for _, o := range worldSpace {
+		numWld := len(worldSpace)
+		for i := 0; i < numWld; i++ {
+			o := worldSpace[order[i].name]
 			ctx.Set("fillStyle", o.C)
 			for _, l := range o.S {
 				for m, n := range l {
