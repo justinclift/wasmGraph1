@@ -7,6 +7,8 @@ import (
 	"math"
 	"syscall/js"
 	"time"
+
+	"go.uber.org/atomic"
 )
 
 type matrix []float64
@@ -131,7 +133,7 @@ var (
 
 	// FIFO queue
 	queue        chan Operation
-	renderActive bool
+	renderActive *atomic.Bool
 
 	width, height      float64
 	kCall, rCall       js.Callback
@@ -152,6 +154,7 @@ func main() {
 	ctx = canvasEl.Call("getContext", "2d")
 
 	// Set up the keypress handler
+	renderActive = atomic.NewBool(false)
 	kCall = js.NewCallback(keypressHander)
 	doc.Call("addEventListener", "keydown", kCall)
 	defer kCall.Release()
@@ -233,7 +236,7 @@ func keypressHander(args []js.Value) {
 
 	// Don't add operations if one is already in progress
 	stepSize := float64(25)
-	if !renderActive {
+	if !renderActive.Load() {
 		switch key {
 		case "ArrowLeft", "a", "A", "4":
 			queue <- Operation{op: ROTATE, t: 50, f: 12, X: 0, Y: -stepSize, Z: 0}
@@ -305,7 +308,7 @@ func matrixMult(opMatrix matrix, m matrix) (resultMatrix matrix) {
 // Animates the transformation operations
 func processOperations(queue <-chan Operation) {
 	for i := range queue {
-		renderActive = true              // Mark rendering as now in progress
+		renderActive.Store(true)         // Mark rendering as now in progress
 		parts := i.f                     // Number of parts to break each transformation into
 		transformMatrix = identityMatrix // Reset the transform matrix
 		switch i.op {
@@ -356,7 +359,7 @@ func processOperations(queue <-chan Operation) {
 				worldSpace[j] = o
 			}
 		}
-		renderActive = false
+		renderActive.Store(false)
 		opText = "Complete. Rotate with WASD or numpad."
 	}
 }
