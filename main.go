@@ -431,8 +431,7 @@ func renderFrame(args []js.Value) {
 		ctx.Set("font", "14px sans-serif")
 		ctx.Call("fillText", opText, graphWidth+20, graphHeight-20) // TODO: Figure out better Y placement
 
-		// It seems kind of weird (to me) to recursively call itself here, instead of using a timer approach, but
-		// apparently this is best practise, at least in web environments: https://css-tricks.com/using-requestanimationframe
+		// Schedule the next frame render call
 		js.Global().Call("requestAnimationFrame", rCall)
 	}
 }
