@@ -410,6 +410,8 @@ func renderFrame(args []js.Value) {
 		}
 
 		// Draw the surfaces
+		// TODO: This should probably sort the objects by distance from the camera, so the drawing operations
+		//       of further away objects don't overwrite closer ones
 		var pointX, pointY float64
 		for _, o := range worldSpace {
 			ctx.Set("fillStyle", o.C)
