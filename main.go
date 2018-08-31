@@ -232,24 +232,29 @@ func keypressHander(args []js.Value) {
 	}
 
 	// Don't add operations if one is already in progress
+	stepSize := float64(25)
 	if !renderActive {
 		switch key {
 		case "ArrowLeft", "a", "A", "4":
-			queue <- Operation{op: ROTATE, t: 100, f: 12, X: 0, Y: -30, Z: 0}
+			queue <- Operation{op: ROTATE, t: 50, f: 12, X: 0, Y: -stepSize, Z: 0}
 		case "ArrowRight", "d", "D", "6":
-			queue <- Operation{op: ROTATE, t: 100, f: 12, X: 0, Y: 30, Z: 0}
+			queue <- Operation{op: ROTATE, t: 50, f: 12, X: 0, Y: stepSize, Z: 0}
 		case "ArrowUp", "w", "W", "8":
-			queue <- Operation{op: ROTATE, t: 100, f: 12, X: -30, Y: 0, Z: 0}
+			queue <- Operation{op: ROTATE, t: 50, f: 12, X: -stepSize, Y: 0, Z: 0}
 		case "ArrowDown", "s", "S", "2":
-			queue <- Operation{op: ROTATE, t: 100, f: 12, X: 30, Y: 0, Z: 0}
+			queue <- Operation{op: ROTATE, t: 50, f: 12, X: stepSize, Y: 0, Z: 0}
 		case "7", "Home":
-			queue <- Operation{op: ROTATE, t: 100, f: 12, X: -30, Y: -30, Z: 0}
+			queue <- Operation{op: ROTATE, t: 50, f: 12, X: -stepSize, Y: -stepSize, Z: 0}
 		case "9", "PageUp":
-			queue <- Operation{op: ROTATE, t: 100, f: 12, X: -30, Y: 30, Z: 0}
+			queue <- Operation{op: ROTATE, t: 50, f: 12, X: -stepSize, Y: stepSize, Z: 0}
 		case "1", "End":
-			queue <- Operation{op: ROTATE, t: 100, f: 12, X: 30, Y: -30, Z: 0}
+			queue <- Operation{op: ROTATE, t: 50, f: 12, X: stepSize, Y: -stepSize, Z: 0}
 		case "3", "PageDown":
-			queue <- Operation{op: ROTATE, t: 100, f: 12, X: 30, Y: 30, Z: 0}
+			queue <- Operation{op: ROTATE, t: 50, f: 12, X: stepSize, Y: stepSize, Z: 0}
+		case "-":
+			queue <- Operation{op: ROTATE, t: 50, f: 12, X: 0, Y: 0, Z: -stepSize}
+		case "+":
+			queue <- Operation{op: ROTATE, t: 50, f: 12, X: 0, Y: 0, Z: stepSize}
 		}
 	}
 }
