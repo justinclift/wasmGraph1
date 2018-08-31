@@ -96,7 +96,7 @@ var (
 		},
 	}
 
-	// The 4x4 identify matrix
+	// The 4x4 identity matrix
 	identityMatrix = matrix{
 		1, 0, 0, 0,
 		0, 1, 0, 0,
