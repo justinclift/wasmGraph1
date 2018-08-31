@@ -457,11 +457,14 @@ func renderFrame(args []js.Value) {
 			}
 		}
 
-		// Draw the surfaces, in Z depth order
+		// Draw the objects, in Z depth order
 		var pointX, pointY float64
+		var pointNum int
 		numWld := len(worldSpace)
 		for i := 0; i < numWld; i++ {
 			o := worldSpace[order[i].name]
+
+			// Draw the surfaces
 			ctx.Set("fillStyle", o.C)
 			for _, l := range o.S {
 				for m, n := range l {
@@ -477,15 +480,13 @@ func renderFrame(args []js.Value) {
 				ctx.Call("closePath")
 				ctx.Call("fill")
 			}
-		}
 
-		// Draw the edges
-		ctx.Set("strokeStyle", "black")
-		ctx.Set("fillStyle", "black")
-		ctx.Set("lineWidth", "1")
-		ctx.Call("setLineDash", []interface{}{2, 4})
-		var point1X, point1Y, point2X, point2Y float64
-		for _, o := range worldSpace {
+			// Draw the edges
+			ctx.Set("strokeStyle", "black")
+			ctx.Set("fillStyle", "black")
+			ctx.Set("lineWidth", "1")
+			ctx.Call("setLineDash", []interface{}{2, 4})
+			var point1X, point1Y, point2X, point2Y float64
 			for _, l := range o.E {
 				point1X = o.P[l[0]].X
 				point1Y = o.P[l[0]].Y
@@ -496,13 +497,10 @@ func renderFrame(args []js.Value) {
 				ctx.Call("lineTo", centerX+(point2X*step), centerY+((point2Y*step)*-1))
 				ctx.Call("stroke")
 			}
-		}
 
-		// Draw the points on the graph
-		ctx.Call("setLineDash", []interface{}{})
-		var pointNum int
-		var px, py float64
-		for _, o := range worldSpace {
+			// Draw the points on the graph
+			ctx.Call("setLineDash", []interface{}{})
+			var px, py float64
 			for _, l := range o.P {
 				// Draw a dot for the point
 				px = centerX + (l.X * step)
