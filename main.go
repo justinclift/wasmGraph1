@@ -19,10 +19,12 @@ type Point struct {
 }
 
 type Edge []int
+type Surface []int
 
 type Object struct {
 	P []Point
-	E []Edge // List of points to connect by edges
+	E []Edge    // List of points to connect by edges
+	S []Surface // List of points to connect in order, to create a surface
 }
 
 type OperationType int
@@ -63,6 +65,12 @@ var (
 			{1, 3},
 			{2, 3},
 		},
+		S: []Surface{
+			{0, 1, 3},
+			{0, 2, 3},
+			{0, 1, 2},
+			{1, 2, 3},
+		},
 	}
 	object2 = Object{
 		P: []Point{
@@ -74,6 +82,9 @@ var (
 			{0, 1}, // Connect point 0 to point 1
 			{1, 2}, // Connect point 1 to point 2
 			{2, 0}, // etc
+		},
+		S: []Surface{
+			{0, 1, 2},
 		},
 	}
 	object3 = Object{
@@ -93,6 +104,13 @@ var (
 			{1, 4},
 			{2, 4},
 			{3, 4},
+		},
+		S: []Surface{
+			{0, 1, 4},
+			{1, 2, 4},
+			{2, 3, 4},
+			{3, 0, 4},
+			{0, 1, 2, 3},
 		},
 	}
 
@@ -323,6 +341,7 @@ func renderFrame(args []js.Value) {
 
 		// Draw the points
 		ctx.Set("strokeStyle", "black")
+		ctx.Set("fillStyle", "black")
 		ctx.Call("setLineDash", []interface{}{})
 		var pointNum int
 		var px, py float64
@@ -331,13 +350,11 @@ func renderFrame(args []js.Value) {
 				// Draw the coloured dot for the point
 				px = centerX + (l.X * step)
 				py = centerY + ((l.Y * step) * -1)
-				ctx.Set("fillStyle", "black")
 				ctx.Call("beginPath")
 				ctx.Call("arc", px, py, 1, 0, 2*math.Pi)
 				ctx.Call("fill")
 
 				// Label the point on the graph
-				ctx.Set("fillStyle", "black")
 				ctx.Set("font", "12px sans-serif")
 				ctx.Call("fillText", fmt.Sprintf("Point %d", l.Num), px+5, py+15)
 
@@ -353,7 +370,6 @@ func renderFrame(args []js.Value) {
 		}
 
 		// Draw the edges
-		ctx.Set("strokeStyle", "black")
 		ctx.Set("lineWidth", "1")
 		ctx.Call("setLineDash", []interface{}{2, 4})
 		var point1X, point1Y, point2X, point2Y float64
