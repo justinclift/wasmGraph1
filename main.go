@@ -132,7 +132,7 @@ var (
 	kCall, rCall       js.Callback
 	ctx, doc, canvasEl js.Value
 	opText             string
-	debug              = true // If true, some debugging info is printed to the javascript console
+	debug              = false // If true, some debugging info is printed to the javascript console
 )
 
 func main() {
