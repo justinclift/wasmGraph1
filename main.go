@@ -227,7 +227,7 @@ func clickHandler(args []js.Value) {
 
 	// If the user clicks the source code URL area, open the URL
 	if clientX > graphWidth && clientY > (height-40) {
-		w := js.Global().Get("window").Call("open", "https://github.com/justinclift/wasmGraph1")
+		w := js.Global().Call("open", "https://github.com/justinclift/wasmGraph1")
 		if w == js.Null() {
 			// Couldn't open a new window, so try loading directly in the existing one instead
 			doc.Set("location", "https://github.com/justinclift/wasmGraph1")
