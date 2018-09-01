@@ -1,4 +1,4 @@
-### A simple experiment with Go Wasm on the HTML5 Canvas (2D).
+### A simple example using Go Wasm with the HTML5 Canvas (2D)
 
 Online demo: https://justinclift.github.io/wasmGraph1/
 
@@ -7,7 +7,7 @@ solids, performing various rotation, scale, and transform operations on them via
 matrix transforms.
 
 Use the wasd, arrow, and numpad keys (including + and -) to rotate the objects
-around the origin.
+around the origin.  Use the mouse wheel to zoom in and out.
 
 The code for this started from https://github.com/stdiopt/gowasm-experiments,
 and has been fairly radically reworked from there. :smile:
