@@ -141,11 +141,11 @@ var (
 	queue        chan Operation
 	renderActive *atomic.Bool
 
-	width, height      float64
-	kCall, rCall       js.Callback
-	ctx, doc, canvasEl js.Value
-	opText             string
-	debug              = false // If true, some debugging info is printed to the javascript console
+	width, height       float64
+	kCall, mCall, rCall js.Callback
+	ctx, doc, canvasEl  js.Value
+	opText              string
+	debug               = false // If true, some debugging info is printed to the javascript console
 )
 
 func main() {
@@ -164,6 +164,11 @@ func main() {
 	kCall = js.NewCallback(keypressHandler)
 	doc.Call("addEventListener", "keydown", kCall)
 	defer kCall.Release()
+
+	// Set up the mouse wheel handler
+	mCall = js.NewCallback(mouseHandler)
+	doc.Call("addEventListener", "wheel", mCall)
+	defer mCall.Release()
 
 	// Set the frame renderer going
 	rCall = js.NewCallback(renderFrame)
@@ -245,7 +250,6 @@ func importObject(ob Object, x float64, y float64, z float64) (translatedObject 
 
 // Simple keyboard handler for catching the arrow, WASD, and numpad keys
 // Key value info can be found here: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
-// TODO: See if it's feasible to catch mouse wheel events.  If so, add scale operations for enabling zoom in/out
 func keypressHandler(args []js.Value) {
 	event := args[0]
 	key := event.Get("key").String()
@@ -324,6 +328,22 @@ func matrixMult(opMatrix matrix, m matrix) (resultMatrix matrix) {
 	return resultMatrix
 }
 
+// Simple mouse handler watching for mouse wheel events
+// Key value info can be found here: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
+func mouseHandler(args []js.Value) {
+	event := args[0]
+	wheelDelta := event.Get("deltaY").Float()
+	scaleSize := 1 + (wheelDelta / 5)
+	if debug {
+		fmt.Printf("Wheel delta: %v, scaleSize: %v\n", wheelDelta, scaleSize)
+	}
+
+	// Don't add operations if one is already in progress
+	if !renderActive.Load() {
+		queue <- Operation{op: SCALE, t: 50, f: 12, X: scaleSize, Y: scaleSize, Z: scaleSize}
+	}
+}
+
 // Animates the transformation operations
 func processOperations(queue <-chan Operation) {
 	for i := range queue {
@@ -387,7 +407,7 @@ func processOperations(queue <-chan Operation) {
 			}
 		}
 		renderActive.Store(false)
-		opText = "Complete. Rotate with WASD or numpad."
+		opText = "Complete."
 	}
 }
 
@@ -525,11 +545,11 @@ func renderFrame(args []js.Value) {
 			for _, l := range o.P {
 				// Draw darker coloured legend text
 				ctx.Set("font", "bold 14px serif")
-				ctx.Call("fillText", fmt.Sprintf("Point %d:", l.Num), graphWidth+20, l.Num*25)
+				ctx.Call("fillText", fmt.Sprintf("Point %d:", l.Num), graphWidth+20, 110+l.Num*25)
 
 				// Draw lighter coloured legend text
 				ctx.Set("font", "12px sans-serif")
-				ctx.Call("fillText", fmt.Sprintf("(%0.1f, %0.1f, %0.1f)", l.X, l.Y, l.Z), graphWidth+100, l.Num*25)
+				ctx.Call("fillText", fmt.Sprintf("(%0.1f, %0.1f, %0.1f)", l.X, l.Y, l.Z), graphWidth+100, 110+l.Num*25)
 				pointNum++
 			}
 		}
@@ -556,11 +576,21 @@ func renderFrame(args []js.Value) {
 		ctx.Call("stroke")
 
 		// Draw the text describing the current operation
-		// TODO: Figure out better Y placement for this
+		textY := top + 20
+		ctx.Set("fillStyle", "black")
 		ctx.Set("font", "bold 14px serif")
-		ctx.Call("fillText", "Operation:", graphWidth+20, graphHeight-40)
+		ctx.Call("fillText", "Operation:", graphWidth+20, textY)
+		textY += 20
 		ctx.Set("font", "14px sans-serif")
-		ctx.Call("fillText", opText, graphWidth+20, graphHeight-20)
+		ctx.Call("fillText", opText, graphWidth+20, textY)
+		textY += 30
+
+		// Add the help text about control keys and mouse zoom
+		ctx.Set("fillStyle", "blue")
+		ctx.Set("font", "14px sans-serif")
+		ctx.Call("fillText", "Use wasd/numpad keys to rotate,", graphWidth+20, textY)
+		textY += 20
+		ctx.Call("fillText", "mouse wheel to zoom.", graphWidth+20, textY)
 
 		// Schedule the next frame render call
 		js.Global().Call("requestAnimationFrame", rCall)
