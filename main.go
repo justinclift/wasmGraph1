@@ -179,9 +179,6 @@ func main() {
 	queue = make(chan Operation)
 	go processOperations(queue)
 
-	// TODO: Look into clip regions, so things outside the graph area aren't drawn
-	//       This probably means we have to draw the point info table on the right differently too
-
 	// Add some objects to the world space
 	worldSpace = make(map[string]Object, 1)
 	worldSpace["ob1"] = importObject(object1, 3.0, 3.0, 0.0)
@@ -457,6 +454,8 @@ func renderFrame(args []js.Value) {
 		}
 
 		// Sort the objects by mid point Z depth order
+		// TODO: Replace this crap bubble sort approach with something decent.  This was ok when I was 90% asleep
+		//       at 3am coding to get something working, but isn't reasonable past the short term. :)
 		order := make(map[int]paintOrder, len(worldSpace))
 		var tmpOrder paintOrder
 		for i, j := range worldSpace {
