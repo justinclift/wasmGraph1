@@ -142,9 +142,13 @@ var (
 	renderActive *atomic.Bool
 
 	width, height       float64
-	kCall, mCall, rCall js.Callback
+	graphWidth          float64
+	graphHeight         float64
+	cCall, kCall, mCall js.Callback
+	rCall, wCall        js.Callback
 	ctx, doc, canvasEl  js.Value
 	opText              string
+	highLightSource     bool
 	debug               = false // If true, some debugging info is printed to the javascript console
 )
 
@@ -159,21 +163,31 @@ func main() {
 	canvasEl.Set("tabIndex", 0) // Not sure if this is needed
 	ctx = canvasEl.Call("getContext", "2d")
 
+	// Set up the mouse click handler
+	cCall = js.NewCallback(clickHandler)
+	doc.Call("addEventListener", "mousedown", cCall)
+	defer cCall.Release()
+
 	// Set up the keypress handler
 	renderActive = atomic.NewBool(false)
 	kCall = js.NewCallback(keypressHandler)
 	doc.Call("addEventListener", "keydown", kCall)
 	defer kCall.Release()
 
-	// Set up the mouse wheel handler
-	mCall = js.NewCallback(mouseHandler)
-	doc.Call("addEventListener", "wheel", mCall)
+	// Set up the mouse move handler
+	mCall = js.NewCallback(moveHandler)
+	doc.Call("addEventListener", "mousemove", mCall)
 	defer mCall.Release()
 
 	// Set the frame renderer going
 	rCall = js.NewCallback(renderFrame)
 	js.Global().Call("requestAnimationFrame", rCall)
 	defer rCall.Release()
+
+	// Set up the mouse wheel handler
+	wCall = js.NewCallback(wheelHandler)
+	doc.Call("addEventListener", "wheel", wCall)
+	defer wCall.Release()
 
 	// Set the operations processor going
 	queue = make(chan Operation)
@@ -197,6 +211,28 @@ func main() {
 	// Keep the application running
 	done := make(chan struct{}, 0)
 	<-done
+}
+
+// Simple mouse handler watching for people clicking on the source code link
+func clickHandler(args []js.Value) {
+	event := args[0]
+	clientX := event.Get("clientX").Float()
+	clientY := event.Get("clientY").Float()
+	if debug {
+		fmt.Printf("ClientX: %v  clientY: %v\n", clientX, clientY)
+		if clientX > graphWidth && clientY > (height-40) {
+			println("URL hit!")
+		}
+	}
+
+	// If the user clicks the source code URL area, open the URL
+	if clientX > graphWidth && clientY > (height-40) {
+		w := js.Global().Get("window").Call("open", "https://github.com/justinclift/wasmGraph1")
+		if w == js.Null() {
+			// Couldn't open a new window, so try loading directly in the existing one instead
+			doc.Set("location", "https://github.com/justinclift/wasmGraph1")
+		}
+	}
 }
 
 // Returns an object who's points have been transformed into 3D world space XYZ co-ordinates.  Also assigns a number
@@ -325,19 +361,20 @@ func matrixMult(opMatrix matrix, m matrix) (resultMatrix matrix) {
 	return resultMatrix
 }
 
-// Simple mouse handler watching for mouse wheel events
-// Reference info can be found here: https://developer.mozilla.org/en-US/docs/Web/Events/wheel
-func mouseHandler(args []js.Value) {
+// Simple mouse handler watching for people moving the mouse over the source code link
+func moveHandler(args []js.Value) {
 	event := args[0]
-	wheelDelta := event.Get("deltaY").Float()
-	scaleSize := 1 + (wheelDelta / 5)
+	clientX := event.Get("clientX").Float()
+	clientY := event.Get("clientY").Float()
 	if debug {
-		fmt.Printf("Wheel delta: %v, scaleSize: %v\n", wheelDelta, scaleSize)
+		fmt.Printf("ClientX: %v  clientY: %v\n", clientX, clientY)
 	}
 
-	// Don't add operations if one is already in progress
-	if !renderActive.Load() {
-		queue <- Operation{op: SCALE, t: 50, f: 12, X: scaleSize, Y: scaleSize, Z: scaleSize}
+	// If the mouse is over the source code link, let the frame renderer know to draw the url in bold
+	if clientX > graphWidth && clientY > (height-40) {
+		highLightSource = true
+	} else {
+		highLightSource = false
 	}
 }
 
@@ -425,8 +462,8 @@ func renderFrame(args []js.Value) {
 		gap := float64(3)
 		left := border + gap
 		top := border + gap
-		graphWidth := width * 0.75
-		graphHeight := height - 1
+		graphWidth = width * 0.75
+		graphHeight = height - 1
 		centerX := graphWidth / 2
 		centerY := graphHeight / 2
 
@@ -571,6 +608,22 @@ func renderFrame(args []js.Value) {
 			}
 		}
 
+		// Clear the source code link area
+		ctx.Set("fillStyle", "white")
+		ctx.Call("fillRect", graphWidth+1, graphHeight-55, width, height)
+
+		// Add the URL to the source code
+		ctx.Set("fillStyle", "black")
+		ctx.Set("font", "bold 14px serif")
+		ctx.Call("fillText", "Source code:", graphWidth+20, graphHeight-35)
+		ctx.Set("fillStyle", "blue")
+		if highLightSource == true {
+			ctx.Set("font", "bold 12px sans-serif")
+		} else {
+			ctx.Set("font", "12px sans-serif")
+		}
+		ctx.Call("fillText", "https://github.com/justinclift/wasmGraph1", graphWidth+20, graphHeight-15)
+
 		// Draw a border around the graph area
 		ctx.Call("setLineDash", []interface{}{})
 		ctx.Set("lineWidth", "2")
@@ -679,4 +732,20 @@ func translate(m matrix, translateX float64, translateY float64, translateZ floa
 		0, 0, 0, 1,
 	}
 	return matrixMult(translateMatrix, m)
+}
+
+// Simple mouse handler watching for mouse wheel events
+// Reference info can be found here: https://developer.mozilla.org/en-US/docs/Web/Events/wheel
+func wheelHandler(args []js.Value) {
+	event := args[0]
+	wheelDelta := event.Get("deltaY").Float()
+	scaleSize := 1 + (wheelDelta / 5)
+	if debug {
+		fmt.Printf("Wheel delta: %v, scaleSize: %v\n", wheelDelta, scaleSize)
+	}
+
+	// Don't add operations if one is already in progress
+	if !renderActive.Load() {
+		queue <- Operation{op: SCALE, t: 50, f: 12, X: scaleSize, Y: scaleSize, Z: scaleSize}
+	}
 }
