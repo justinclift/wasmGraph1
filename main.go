@@ -329,7 +329,7 @@ func matrixMult(opMatrix matrix, m matrix) (resultMatrix matrix) {
 }
 
 // Simple mouse handler watching for mouse wheel events
-// Key value info can be found here: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
+// Reference info can be found here: https://developer.mozilla.org/en-US/docs/Web/Events/wheel
 func mouseHandler(args []js.Value) {
 	event := args[0]
 	wheelDelta := event.Get("deltaY").Float()
@@ -539,17 +539,35 @@ func renderFrame(args []js.Value) {
 		ctx.Set("fillStyle", "white")
 		ctx.Call("fillRect", graphWidth+1, 0, width, height)
 
-		// Draw the information area (right side) text
+		// Draw the text describing the current operation
+		textY := top + 20
+		ctx.Set("fillStyle", "black")
+		ctx.Set("font", "bold 14px serif")
+		ctx.Call("fillText", "Operation:", graphWidth+20, textY)
+		textY += 20
+		ctx.Set("font", "14px sans-serif")
+		ctx.Call("fillText", opText, graphWidth+20, textY)
+		textY += 30
+
+		// Add the help text about control keys and mouse zoom
+		ctx.Set("fillStyle", "blue")
+		ctx.Set("font", "14px sans-serif")
+		ctx.Call("fillText", "Use wasd/numpad keys to rotate,", graphWidth+20, textY)
+		textY += 20
+		ctx.Call("fillText", "mouse wheel to zoom.", graphWidth+20, textY)
+		textY += 10
+
+		// Add the point co-ordinate information
 		ctx.Set("fillStyle", "black")
 		for _, o := range worldSpace {
 			for _, l := range o.P {
 				// Draw darker coloured legend text
 				ctx.Set("font", "bold 14px serif")
-				ctx.Call("fillText", fmt.Sprintf("Point %d:", l.Num), graphWidth+20, 110+l.Num*25)
+				ctx.Call("fillText", fmt.Sprintf("Point %d:", l.Num), graphWidth+20, textY+float64(l.Num*25))
 
 				// Draw lighter coloured legend text
 				ctx.Set("font", "12px sans-serif")
-				ctx.Call("fillText", fmt.Sprintf("(%0.1f, %0.1f, %0.1f)", l.X, l.Y, l.Z), graphWidth+100, 110+l.Num*25)
+				ctx.Call("fillText", fmt.Sprintf("(%0.1f, %0.1f, %0.1f)", l.X, l.Y, l.Z), graphWidth+100, textY+float64(l.Num*25))
 				pointNum++
 			}
 		}
@@ -574,23 +592,6 @@ func renderFrame(args []js.Value) {
 		ctx.Call("lineTo", border, graphHeight)
 		ctx.Call("closePath")
 		ctx.Call("stroke")
-
-		// Draw the text describing the current operation
-		textY := top + 20
-		ctx.Set("fillStyle", "black")
-		ctx.Set("font", "bold 14px serif")
-		ctx.Call("fillText", "Operation:", graphWidth+20, textY)
-		textY += 20
-		ctx.Set("font", "14px sans-serif")
-		ctx.Call("fillText", opText, graphWidth+20, textY)
-		textY += 30
-
-		// Add the help text about control keys and mouse zoom
-		ctx.Set("fillStyle", "blue")
-		ctx.Set("font", "14px sans-serif")
-		ctx.Call("fillText", "Use wasd/numpad keys to rotate,", graphWidth+20, textY)
-		textY += 20
-		ctx.Call("fillText", "mouse wheel to zoom.", graphWidth+20, textY)
 
 		// Schedule the next frame render call
 		js.Global().Call("requestAnimationFrame", rCall)
