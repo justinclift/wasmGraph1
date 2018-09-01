@@ -56,7 +56,7 @@ type paintOrder struct {
 var (
 	// The empty world space
 	worldSpace   map[string]Object
-	pointCounter = int(1)
+	pointCounter = 1
 
 	// The point objects
 	object1 = Object{
