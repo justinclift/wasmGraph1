@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"sort"
 	"syscall/js"
 	"time"
 
@@ -51,6 +52,24 @@ type Operation struct {
 type paintOrder struct {
 	midZ float64 // Z depth of an object's mid point
 	name string
+}
+
+type paintOrderSlice []paintOrder
+
+func (p paintOrder) String() string {
+	return fmt.Sprintf("Name: %v, Mid point: %v", p.name, p.midZ)
+}
+
+func (p paintOrderSlice) Len() int {
+	return len(p)
+}
+
+func (p paintOrderSlice) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
+}
+
+func (p paintOrderSlice) Less(i, j int) bool {
+	return p[i].midZ < p[j].midZ
 }
 
 var (
@@ -491,27 +510,11 @@ func renderFrame(args []js.Value) {
 		}
 
 		// Sort the objects by mid point Z depth order
-		// TODO: Replace this crap bubble sort approach with something decent.  This was ok when I was 90% asleep
-		//       at 3am coding to get something working, but isn't reasonable past the short term. :)
-		order := make(map[int]paintOrder, len(worldSpace))
-		var tmpOrder paintOrder
+		var order paintOrderSlice
 		for i, j := range worldSpace {
-			if len(order) == 0 {
-				// Add the first order item
-				order[0] = paintOrder{name: i, midZ: j.Mid.Z}
-			} else {
-				tmpOrder = paintOrder{name: i, midZ: j.Mid.Z}
-				for k := 0; k < len(order); k++ {
-					if order[k].midZ > tmpOrder.midZ {
-						// Swap the items
-						a := paintOrder{name: order[k].name, midZ: order[k].midZ}
-						order[k] = tmpOrder
-						tmpOrder = a
-					}
-				}
-				order[len(order)] = tmpOrder // Add the new item (should be the largest Z value so far) to the end
-			}
+			order = append(order, paintOrder{name: i, midZ: j.Mid.Z})
 		}
+		sort.Sort(paintOrderSlice(order))
 
 		// Draw the objects, in Z depth order
 		var pointX, pointY float64
