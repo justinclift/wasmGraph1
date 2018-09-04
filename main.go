@@ -254,7 +254,7 @@ func clickHandler(args []js.Value) {
 	}
 }
 
-// Returns an object who's points have been transformed into 3D world space XYZ co-ordinates.  Also assigns a number
+// Returns an object whose points have been transformed into 3D world space XYZ co-ordinates.  Also assigns a number
 // to each point
 func importObject(ob Object, x float64, y float64, z float64) (translatedObject Object) {
 	// X and Y translation matrix.  Translates the objects into the world space at the given X and Y co-ordinates
