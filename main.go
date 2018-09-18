@@ -490,6 +490,17 @@ func renderFrame(args []js.Value) {
 		ctx.Set("fillStyle", "white")
 		ctx.Call("fillRect", 0, 0, width, height)
 
+		// Save the current graphics state - no clip region currently defined - as the default
+		ctx.Call("save")
+
+		// Set the clip region so drawing only occurs in the display area
+		ctx.Call("beginPath")
+		ctx.Call("moveTo", 0, 0)
+		ctx.Call("lineTo", graphWidth, 0)
+		ctx.Call("lineTo", graphWidth, height)
+		ctx.Call("lineTo", 0, height)
+		ctx.Call("clip")
+
 		// Draw grid lines
 		step := math.Min(width, height) / 30
 		ctx.Set("strokeStyle", "rgb(220, 220, 220)")
@@ -574,9 +585,15 @@ func renderFrame(args []js.Value) {
 			}
 		}
 
-		// Clear the information area (right side)
-		ctx.Set("fillStyle", "white")
-		ctx.Call("fillRect", graphWidth+1, 0, width, height)
+		// Set the clip region so drawing only occurs in the display area
+		ctx.Call("restore")
+		ctx.Call("save")
+		ctx.Call("beginPath")
+		ctx.Call("moveTo", graphWidth, 0)
+		ctx.Call("lineTo", width, 0)
+		ctx.Call("lineTo", width, height)
+		ctx.Call("lineTo", graphWidth, height)
+		ctx.Call("clip")
 
 		// Draw the text describing the current operation
 		textY := top + 20
@@ -647,6 +664,9 @@ func renderFrame(args []js.Value) {
 		ctx.Call("lineTo", border, graphHeight)
 		ctx.Call("closePath")
 		ctx.Call("stroke")
+
+		// Restore the default graphics state (eg no clip region)
+		ctx.Call("restore")
 
 		// Schedule the next frame render call
 		js.Global().Call("requestAnimationFrame", rCall)
