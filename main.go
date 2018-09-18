@@ -2,7 +2,7 @@
 // compile: GOOS=js GOARCH=wasm go build -o main.wasm ./main.go
 package main
 
-// TODO: Some of the items mentioned on the MDN "Optimizing Canvas" page look like they're be useful:
+// TODO: Some of the items mentioned on the MDN "Optimizing Canvas" page look like they'll be useful:
 //       https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas
 //       * Drawing to an off screen canvas just a few times a second, then rendering that to the main screen might
 //         cut down on the cpu usage
