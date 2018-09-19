@@ -472,211 +472,209 @@ func processOperations(queue <-chan Operation) {
 
 // Renders one frame of the animation
 func renderFrame(args []js.Value) {
-	{
-		// Handle window resizing
-		curBodyW := doc.Get("body").Get("clientWidth").Float()
-		curBodyH := doc.Get("body").Get("clientHeight").Float()
-		if curBodyW != width || curBodyH != height {
-			width, height = curBodyW, curBodyH
-			canvasEl.Set("width", width)
-			canvasEl.Set("height", height)
-		}
-
-		// Setup useful variables
-		border := float64(2)
-		gap := float64(3)
-		left := border + gap
-		top := border + gap
-		graphWidth = width * 0.75
-		graphHeight = height - 1
-		centerX := graphWidth / 2
-		centerY := graphHeight / 2
-
-		// Clear the background
-		ctx.Set("fillStyle", "white")
-		ctx.Call("fillRect", 0, 0, width, height)
-
-		// Save the current graphics state - no clip region currently defined - as the default
-		ctx.Call("save")
-
-		// Set the clip region so drawing only occurs in the display area
-		ctx.Call("beginPath")
-		ctx.Call("moveTo", 0, 0)
-		ctx.Call("lineTo", graphWidth, 0)
-		ctx.Call("lineTo", graphWidth, height)
-		ctx.Call("lineTo", 0, height)
-		ctx.Call("clip")
-
-		// Draw grid lines
-		step := math.Min(width, height) / 30
-		ctx.Set("strokeStyle", "rgb(220, 220, 220)")
-		ctx.Call("setLineDash", []interface{}{1, 3})
-		for i := left; i < graphWidth-step; i += step {
-			// Vertical dashed lines
-			ctx.Call("beginPath")
-			ctx.Call("moveTo", i+step, top)
-			ctx.Call("lineTo", i+step, graphHeight)
-			ctx.Call("stroke")
-		}
-		for i := top; i < graphHeight-step; i += step {
-			// Horizontal dashed lines
-			ctx.Call("beginPath")
-			ctx.Call("moveTo", left, i+step)
-			ctx.Call("lineTo", graphWidth-border, i+step)
-			ctx.Call("stroke")
-		}
-
-		// Sort the objects by mid point Z depth order
-		var order paintOrderSlice
-		for i, j := range worldSpace {
-			order = append(order, paintOrder{name: i, midZ: j.Mid.Z})
-		}
-		sort.Sort(paintOrderSlice(order))
-
-		// Draw the objects, in Z depth order
-		var pointX, pointY float64
-		var pointNum int
-		numWld := len(worldSpace)
-		for i := 0; i < numWld; i++ {
-			o := worldSpace[order[i].name]
-
-			// Draw the surfaces
-			ctx.Set("fillStyle", o.C)
-			for _, l := range o.S {
-				for m, n := range l {
-					pointX = o.P[n].X
-					pointY = o.P[n].Y
-					if m == 0 {
-						ctx.Call("beginPath")
-						ctx.Call("moveTo", centerX+(pointX*step), centerY+((pointY*step)*-1))
-					} else {
-						ctx.Call("lineTo", centerX+(pointX*step), centerY+((pointY*step)*-1))
-					}
-				}
-				ctx.Call("closePath")
-				ctx.Call("fill")
-			}
-
-			// Draw the edges
-			ctx.Set("strokeStyle", "black")
-			ctx.Set("fillStyle", "black")
-			ctx.Set("lineWidth", "1")
-			ctx.Call("setLineDash", []interface{}{2, 4})
-			var point1X, point1Y, point2X, point2Y float64
-			for _, l := range o.E {
-				point1X = o.P[l[0]].X
-				point1Y = o.P[l[0]].Y
-				point2X = o.P[l[1]].X
-				point2Y = o.P[l[1]].Y
-				ctx.Call("beginPath")
-				ctx.Call("moveTo", centerX+(point1X*step), centerY+((point1Y*step)*-1))
-				ctx.Call("lineTo", centerX+(point2X*step), centerY+((point2Y*step)*-1))
-				ctx.Call("stroke")
-			}
-
-			// Draw the points on the graph
-			ctx.Call("setLineDash", []interface{}{})
-			var px, py float64
-			for _, l := range o.P {
-				// Draw a dot for the point
-				px = centerX + (l.X * step)
-				py = centerY + ((l.Y * step) * -1)
-				ctx.Call("beginPath")
-				ctx.Call("arc", px, py, 1, 0, 2*math.Pi)
-				ctx.Call("fill")
-
-				// Label the point on the graph
-				ctx.Set("font", "12px sans-serif")
-				ctx.Call("fillText", fmt.Sprintf("Point %d", l.Num), px+5, py+15)
-			}
-		}
-
-		// Set the clip region so drawing only occurs in the display area
-		ctx.Call("restore")
-		ctx.Call("save")
-		ctx.Call("beginPath")
-		ctx.Call("moveTo", graphWidth, 0)
-		ctx.Call("lineTo", width, 0)
-		ctx.Call("lineTo", width, height)
-		ctx.Call("lineTo", graphWidth, height)
-		ctx.Call("clip")
-
-		// Draw the text describing the current operation
-		textY := top + 20
-		ctx.Set("fillStyle", "black")
-		ctx.Set("font", "bold 14px serif")
-		ctx.Call("fillText", "Operation:", graphWidth+20, textY)
-		textY += 20
-		ctx.Set("font", "14px sans-serif")
-		ctx.Call("fillText", opText, graphWidth+20, textY)
-		textY += 30
-
-		// Add the help text about control keys and mouse zoom
-		ctx.Set("fillStyle", "blue")
-		ctx.Set("font", "14px sans-serif")
-		ctx.Call("fillText", "Use wasd/numpad keys to rotate,", graphWidth+20, textY)
-		textY += 20
-		ctx.Call("fillText", "mouse wheel to zoom.", graphWidth+20, textY)
-		textY += 10
-
-		// Add the point co-ordinate information
-		ctx.Set("fillStyle", "black")
-		for _, o := range worldSpace {
-			for _, l := range o.P {
-				// Draw darker coloured legend text
-				ctx.Set("font", "bold 14px serif")
-				ctx.Call("fillText", fmt.Sprintf("Point %d:", l.Num), graphWidth+20, textY+float64(l.Num*25))
-
-				// Draw lighter coloured legend text
-				ctx.Set("font", "12px sans-serif")
-				ctx.Call("fillText", fmt.Sprintf("(%0.1f, %0.1f, %0.1f)", l.X, l.Y, l.Z), graphWidth+100, textY+float64(l.Num*25))
-				pointNum++
-			}
-		}
-
-		// Clear the source code link area
-		ctx.Set("fillStyle", "white")
-		ctx.Call("fillRect", graphWidth+1, graphHeight-55, width, height)
-
-		// Add the URL to the source code
-		ctx.Set("fillStyle", "black")
-		ctx.Set("font", "bold 14px serif")
-		ctx.Call("fillText", "Source code:", graphWidth+20, graphHeight-35)
-		ctx.Set("fillStyle", "blue")
-		if highLightSource == true {
-			ctx.Set("font", "bold 12px sans-serif")
-		} else {
-			ctx.Set("font", "12px sans-serif")
-		}
-		ctx.Call("fillText", "https://github.com/justinclift/wasmGraph1", graphWidth+20, graphHeight-15)
-
-		// Draw a border around the graph area
-		ctx.Call("setLineDash", []interface{}{})
-		ctx.Set("lineWidth", "2")
-		ctx.Set("strokeStyle", "white")
-		ctx.Call("beginPath")
-		ctx.Call("moveTo", 0, 0)
-		ctx.Call("lineTo", width, 0)
-		ctx.Call("lineTo", width, height)
-		ctx.Call("lineTo", 0, height)
-		ctx.Call("closePath")
-		ctx.Call("stroke")
-		ctx.Set("lineWidth", "2")
-		ctx.Set("strokeStyle", "black")
-		ctx.Call("beginPath")
-		ctx.Call("moveTo", border, border)
-		ctx.Call("lineTo", graphWidth, border)
-		ctx.Call("lineTo", graphWidth, graphHeight)
-		ctx.Call("lineTo", border, graphHeight)
-		ctx.Call("closePath")
-		ctx.Call("stroke")
-
-		// Restore the default graphics state (eg no clip region)
-		ctx.Call("restore")
-
-		// Schedule the next frame render call
-		js.Global().Call("requestAnimationFrame", rCall)
+	// Handle window resizing
+	curBodyW := doc.Get("body").Get("clientWidth").Float()
+	curBodyH := doc.Get("body").Get("clientHeight").Float()
+	if curBodyW != width || curBodyH != height {
+		width, height = curBodyW, curBodyH
+		canvasEl.Set("width", width)
+		canvasEl.Set("height", height)
 	}
+
+	// Setup useful variables
+	border := float64(2)
+	gap := float64(3)
+	left := border + gap
+	top := border + gap
+	graphWidth = width * 0.75
+	graphHeight = height - 1
+	centerX := graphWidth / 2
+	centerY := graphHeight / 2
+
+	// Clear the background
+	ctx.Set("fillStyle", "white")
+	ctx.Call("fillRect", 0, 0, width, height)
+
+	// Save the current graphics state - no clip region currently defined - as the default
+	ctx.Call("save")
+
+	// Set the clip region so drawing only occurs in the display area
+	ctx.Call("beginPath")
+	ctx.Call("moveTo", 0, 0)
+	ctx.Call("lineTo", graphWidth, 0)
+	ctx.Call("lineTo", graphWidth, height)
+	ctx.Call("lineTo", 0, height)
+	ctx.Call("clip")
+
+	// Draw grid lines
+	step := math.Min(width, height) / 30
+	ctx.Set("strokeStyle", "rgb(220, 220, 220)")
+	ctx.Call("setLineDash", []interface{}{1, 3})
+	for i := left; i < graphWidth-step; i += step {
+		// Vertical dashed lines
+		ctx.Call("beginPath")
+		ctx.Call("moveTo", i+step, top)
+		ctx.Call("lineTo", i+step, graphHeight)
+		ctx.Call("stroke")
+	}
+	for i := top; i < graphHeight-step; i += step {
+		// Horizontal dashed lines
+		ctx.Call("beginPath")
+		ctx.Call("moveTo", left, i+step)
+		ctx.Call("lineTo", graphWidth-border, i+step)
+		ctx.Call("stroke")
+	}
+
+	// Sort the objects by mid point Z depth order
+	var order paintOrderSlice
+	for i, j := range worldSpace {
+		order = append(order, paintOrder{name: i, midZ: j.Mid.Z})
+	}
+	sort.Sort(paintOrderSlice(order))
+
+	// Draw the objects, in Z depth order
+	var pointX, pointY float64
+	var pointNum int
+	numWld := len(worldSpace)
+	for i := 0; i < numWld; i++ {
+		o := worldSpace[order[i].name]
+
+		// Draw the surfaces
+		ctx.Set("fillStyle", o.C)
+		for _, l := range o.S {
+			for m, n := range l {
+				pointX = o.P[n].X
+				pointY = o.P[n].Y
+				if m == 0 {
+					ctx.Call("beginPath")
+					ctx.Call("moveTo", centerX+(pointX*step), centerY+((pointY*step)*-1))
+				} else {
+					ctx.Call("lineTo", centerX+(pointX*step), centerY+((pointY*step)*-1))
+				}
+			}
+			ctx.Call("closePath")
+			ctx.Call("fill")
+		}
+
+		// Draw the edges
+		ctx.Set("strokeStyle", "black")
+		ctx.Set("fillStyle", "black")
+		ctx.Set("lineWidth", "1")
+		ctx.Call("setLineDash", []interface{}{2, 4})
+		var point1X, point1Y, point2X, point2Y float64
+		for _, l := range o.E {
+			point1X = o.P[l[0]].X
+			point1Y = o.P[l[0]].Y
+			point2X = o.P[l[1]].X
+			point2Y = o.P[l[1]].Y
+			ctx.Call("beginPath")
+			ctx.Call("moveTo", centerX+(point1X*step), centerY+((point1Y*step)*-1))
+			ctx.Call("lineTo", centerX+(point2X*step), centerY+((point2Y*step)*-1))
+			ctx.Call("stroke")
+		}
+
+		// Draw the points on the graph
+		ctx.Call("setLineDash", []interface{}{})
+		var px, py float64
+		for _, l := range o.P {
+			// Draw a dot for the point
+			px = centerX + (l.X * step)
+			py = centerY + ((l.Y * step) * -1)
+			ctx.Call("beginPath")
+			ctx.Call("arc", px, py, 1, 0, 2*math.Pi)
+			ctx.Call("fill")
+
+			// Label the point on the graph
+			ctx.Set("font", "12px sans-serif")
+			ctx.Call("fillText", fmt.Sprintf("Point %d", l.Num), px+5, py+15)
+		}
+	}
+
+	// Set the clip region so drawing only occurs in the display area
+	ctx.Call("restore")
+	ctx.Call("save")
+	ctx.Call("beginPath")
+	ctx.Call("moveTo", graphWidth, 0)
+	ctx.Call("lineTo", width, 0)
+	ctx.Call("lineTo", width, height)
+	ctx.Call("lineTo", graphWidth, height)
+	ctx.Call("clip")
+
+	// Draw the text describing the current operation
+	textY := top + 20
+	ctx.Set("fillStyle", "black")
+	ctx.Set("font", "bold 14px serif")
+	ctx.Call("fillText", "Operation:", graphWidth+20, textY)
+	textY += 20
+	ctx.Set("font", "14px sans-serif")
+	ctx.Call("fillText", opText, graphWidth+20, textY)
+	textY += 30
+
+	// Add the help text about control keys and mouse zoom
+	ctx.Set("fillStyle", "blue")
+	ctx.Set("font", "14px sans-serif")
+	ctx.Call("fillText", "Use wasd/numpad keys to rotate,", graphWidth+20, textY)
+	textY += 20
+	ctx.Call("fillText", "mouse wheel to zoom.", graphWidth+20, textY)
+	textY += 10
+
+	// Add the point co-ordinate information
+	ctx.Set("fillStyle", "black")
+	for _, o := range worldSpace {
+		for _, l := range o.P {
+			// Draw darker coloured legend text
+			ctx.Set("font", "bold 14px serif")
+			ctx.Call("fillText", fmt.Sprintf("Point %d:", l.Num), graphWidth+20, textY+float64(l.Num*25))
+
+			// Draw lighter coloured legend text
+			ctx.Set("font", "12px sans-serif")
+			ctx.Call("fillText", fmt.Sprintf("(%0.1f, %0.1f, %0.1f)", l.X, l.Y, l.Z), graphWidth+100, textY+float64(l.Num*25))
+			pointNum++
+		}
+	}
+
+	// Clear the source code link area
+	ctx.Set("fillStyle", "white")
+	ctx.Call("fillRect", graphWidth+1, graphHeight-55, width, height)
+
+	// Add the URL to the source code
+	ctx.Set("fillStyle", "black")
+	ctx.Set("font", "bold 14px serif")
+	ctx.Call("fillText", "Source code:", graphWidth+20, graphHeight-35)
+	ctx.Set("fillStyle", "blue")
+	if highLightSource == true {
+		ctx.Set("font", "bold 12px sans-serif")
+	} else {
+		ctx.Set("font", "12px sans-serif")
+	}
+	ctx.Call("fillText", "https://github.com/justinclift/wasmGraph1", graphWidth+20, graphHeight-15)
+
+	// Draw a border around the graph area
+	ctx.Call("setLineDash", []interface{}{})
+	ctx.Set("lineWidth", "2")
+	ctx.Set("strokeStyle", "white")
+	ctx.Call("beginPath")
+	ctx.Call("moveTo", 0, 0)
+	ctx.Call("lineTo", width, 0)
+	ctx.Call("lineTo", width, height)
+	ctx.Call("lineTo", 0, height)
+	ctx.Call("closePath")
+	ctx.Call("stroke")
+	ctx.Set("lineWidth", "2")
+	ctx.Set("strokeStyle", "black")
+	ctx.Call("beginPath")
+	ctx.Call("moveTo", border, border)
+	ctx.Call("lineTo", graphWidth, border)
+	ctx.Call("lineTo", graphWidth, graphHeight)
+	ctx.Call("lineTo", border, graphHeight)
+	ctx.Call("closePath")
+	ctx.Call("stroke")
+
+	// Restore the default graphics state (eg no clip region)
+	ctx.Call("restore")
+
+	// Schedule the next frame render call
+	js.Global().Call("requestAnimationFrame", rCall)
 }
 
 // Rotates a transformation matrix around the X axis by the given degrees
