@@ -282,9 +282,9 @@ func importObject(ob Object, x float64, y float64, z float64) (translatedObject 
 			Z:   (translateMatrix[8] * j.X) + (translateMatrix[9] * j.Y) + (translateMatrix[10] * j.Z) + (translateMatrix[11] * 1), // 1st col, lower middle
 		}
 		translatedObject.P = append(translatedObject.P, pt)
-		midX = pt.X
-		midY = pt.Y
-		midZ = pt.Z
+		midX += pt.X
+		midY += pt.Y
+		midZ += pt.Z
 		pointCounter++
 	}
 
